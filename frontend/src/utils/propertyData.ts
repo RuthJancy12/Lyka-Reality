@@ -96,7 +96,13 @@ export function formatProperty(raw: any): Property {
     image_url: raw.image_url && raw.image_url.startsWith('http') ? raw.image_url : primary,
     image_gallery: galleryList,
     listed_days_ago: Number(raw.listed_days_ago ?? 10),
-    image_caption: raw.image_caption
+    image_caption: raw.image_caption,
+    ...(typeof raw.match_score === 'number' ? { match_score: raw.match_score } : {}),
+    ...(Array.isArray(raw.match_reasons) ? { match_reasons: raw.match_reasons } : {}),
+    ...(Array.isArray(raw.mismatches) ? { mismatches: raw.mismatches } : {}),
+    ...((raw.is_nearby_alternative === true || raw.isNearbyAlternative === true) ? { isNearbyAlternative: true } : {}),
+    ...(typeof (raw.requested_location ?? raw.nearbyRequestedLocation) === 'string' ? { nearbyRequestedLocation: (raw.requested_location ?? raw.nearbyRequestedLocation) as string } : {}),
+    ...(typeof (raw.actual_location ?? raw.actualLocation) === 'string' ? { actualLocation: (raw.actual_location ?? raw.actualLocation) as string } : {})
   }
 }
 

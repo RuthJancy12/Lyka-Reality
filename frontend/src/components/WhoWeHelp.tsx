@@ -107,6 +107,10 @@ export function WhoWeHelp({ onCategoryClick }: WhoWeHelpProps) {
                 <img
                   src={g.image}
                   alt={g.title}
+                  loading="lazy"
+                  decoding="async"
+                  width="360"
+                  height="160"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               </div>

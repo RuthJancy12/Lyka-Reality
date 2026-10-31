@@ -259,7 +259,7 @@ export function VoiceAgent({ isOpen, onClose, onVoiceTranscript }: VoiceAgentPro
                 : 4
               const barColor =
                 voiceState === 'SPEAKING'
-                  ? '#3B82F6'
+                  ? '#C6A15B'
                   : voiceState === 'LISTENING'
                   ? 'var(--gold-primary, #C5A059)'
                   : '#D1D5DB'
@@ -410,7 +410,7 @@ export function VoiceAgent({ isOpen, onClose, onVoiceTranscript }: VoiceAgentPro
                   voiceState === 'LISTENING'
                     ? '#10B981'
                     : voiceState === 'SPEAKING'
-                    ? '#3B82F6'
+                    ? '#C6A15B'
                     : voiceState === 'THINKING'
                     ? 'var(--gold-primary, #C5A059)'
                     : voiceState === 'ERROR'

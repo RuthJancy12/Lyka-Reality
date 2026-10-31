@@ -1,29 +1,88 @@
+@import "tailwindcss";
+
 :root {
   /* ========================================================
-     LYKA REALTY LUXURY REAL-ESTATE DESIGN SYSTEM
-     Palette: Champagne, Rose, Plum, Gold Accents
+     LYKA REALTY MODERN REAL-ESTATE CRM DESIGN SYSTEM
+     Primary Palette:
+       Midnight Navy: #172A46
+       Teal Accent:   #11B5A4
+       Light Ivory:   #F8F7F2
+       Soft Lavender: #A5B4FC
+     Lead Badges:
+       HOT Lead:      #FF6B6B (Coral Red)
+       WARM Lead:     #F59E0B (Amber)
+       COLD Lead:     #0EA5E9 (Sky Blue)
      ======================================================== */
 
-  /* Plum (Regal dark foundation, high-contrast dark surfaces) */
-  --plum-deep: #1A0D18;
-  --plum-main: #2A1426;
-  --plum-surface: #381B33;
-  --plum-hover: #3E1E38;
+  /* Modern Foundation Tokens */
+  --navy-primary: #172A46;
+  --navy-deep: #0D1B2A;
+  --navy-surface: #1E3A5F;
+  --navy-card: #FFFFFF;
+  --navy-border: #2D4A77;
+
+  /* Teal Accent */
+  --teal-accent: #11B5A4;
+  --teal-hover: #0E9B8C;
+  --teal-light: #E6F8F6;
+  --teal-border: rgba(17, 181, 164, 0.4);
+
+  /* Light Ivory Neutral Background */
+  --ivory-bg: #F8F7F2;
+  --ivory-surface: #FFFFFF;
+  --ivory-border: #E5E2D9;
+  --ivory-muted: #EFECE4;
+
+  /* Soft Lavender Highlights */
+  --lavender-soft: #A5B4FC;
+  --lavender-light: #EEF2FF;
+  --lavender-border: #C7D2FE;
+
+  /* Transparent & Bright Lead Indicators */
+  --lead-hot: #FF6B6B;
+  --lead-hot-bg: #FEF2F2;
+  --lead-hot-border: #FECACA;
+  --lead-warm: #F59E0B;
+  --lead-warm-bg: #FEF3C7;
+  --lead-warm-border: #FDE68A;
+  --lead-cold: #0EA5E9;
+  --lead-cold-bg: #E0F2FE;
+  --lead-cold-border: #BAE6FD;
+
+  /* Luxury Plum & Champagne Gold Specification Tokens */
+  --plum-deep-spec: #3B2348;
+  --plum-rich-spec: #53345F;
+  --gold-champagne-spec: #C6A15B;
+  --gold-soft-spec: #E2C98D;
+  --ivory-warm-spec: #FAF7F0;
+  --charcoal-spec: #26232B;
+  --lavender-muted-spec: #EEE7F2;
+  --status-success-spec: #21845B;
+  --status-warning-spec: #D97706;
+  --status-error-spec: #C83D45;
+  --status-info-spec: #3478B8;
+
+  /* Official LYKA Luxury Plum & Champagne Gold System */
+  --plum-deep: #3B2348;
+  --plum-rich: #53345F;
+  --plum-main: #3B2348;
+  --plum-surface: #53345F;
+  --plum-hover: #53345F;
   --plum-border: #4A2844;
   --plum-muted: #563350;
 
-  /* Backward-compatible Primary Tokens (mapped to Plum) */
-  --primary-navy: #2A1426;
-  --primary-navy-hover: #3E1E38;
-  --primary-navy-dark: #1A0D18;
+  /* Backward-compatible Primary Tokens (mapped to Official Plum) */
+  --primary-navy: #3B2348;
+  --primary-navy-hover: #53345F;
+  --primary-navy-dark: #26232B;
 
-  /* Champagne (Warm, opulent luxury neutral base & surfaces) */
-  --champagne-light: #FBF8F3;
+  /* Champagne Gold (Warm, opulent luxury neutral base & surfaces) */
+  --champagne-light: #FAF7F0;
   --champagne-surface: #F5EFE6;
   --champagne-card: #FFFFFF;
-  --champagne-muted: #EDE3D5;
-  --champagne-border: #E5DACB;
-  --champagne-dark: #D4C3AC;
+  --champagne-muted: #EFE7DA;
+  --champagne-border: #E8DCC8;
+  --champagne-dark: #A68748;
 
   /* Backward-compatible Secondary Tokens (mapped to Champagne) */
   --secondary-beige: #F5EFE6;
@@ -40,27 +99,29 @@
   --rose-light: #F9EFF3;
   --rose-border: #E8CFD7;
 
-  /* Gold (Strategic luxury accent throughout: buttons, highlights, borders, hover) */
-  --gold-primary: #C5A869;
-  --gold-hover: #D8BD80;
-  --gold-light: #FAF5EA;
+  /* Official Champagne Gold & Soft Gold Tokens */
+  --gold-champagne: #C6A15B;
+  --gold-soft: #E2C98D;
+  --gold-primary: #C6A15B;
+  --gold-hover: #E2C98D;
+  --gold-light: #FAF7F0;
   --gold-dark: #A68748;
-  --gold-border: rgba(197, 168, 105, 0.4);
+  --gold-border: rgba(198, 161, 91, 0.4);
   --gold-border-solid: #D8C28E;
-  --gold-shadow: 0 4px 18px rgba(197, 168, 105, 0.32);
-  --gold-gradient: linear-gradient(135deg, #D6BC7E 0%, #C5A869 50%, #B3914D 100%);
+  --gold-shadow: 0 4px 18px rgba(198, 161, 91, 0.32);
+  --gold-gradient: linear-gradient(135deg, #E2C98D 0%, #C6A15B 50%, #A68748 100%);
 
-  /* Backward-compatible Sage Tokens (mapped to Gold & Rose) */
-  --accent-sage: #C5A869;
+  /* Backward-compatible Sage Tokens (mapped to Gold) */
+  --accent-sage: #C6A15B;
   --accent-sage-dark: #A68748;
-  --accent-sage-light: #FAF5EA;
+  --accent-sage-light: #FAF7F0;
 
-  /* Typography Colors (High contrast & readability) */
-  --text-main: #1F101C;
-  --text-secondary: #5A4B56;
-  --text-muted: #8A7B85;
-  --text-on-dark: #FBF8F3;
-  --text-gold: #C5A869;
+  /* Typography Colors (Official Charcoal & Plum) */
+  --text-main: #26232B;
+  --text-secondary: #53345F;
+  --text-muted: #7A6B78;
+  --text-on-dark: #FAF7F0;
+  --text-gold: #C6A15B;
 
   /* Borders */
   --border-light: #E5DACB;
@@ -82,6 +143,62 @@
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-full: 9999px;
+
+  /* Official LYKA Light Theme Tokens */
+  --theme-bg: #FAF7F0;
+  --theme-surface: #FFFFFF;
+  --theme-surface-elevated: #FAF7F0;
+  --theme-primary: #3B2348;
+  --theme-secondary: #53345F;
+  --theme-accent: #C6A15B;
+  --theme-soft-accent: #E2C98D;
+  --theme-text: #26232B;
+  --theme-muted: #746875;
+  --theme-border: #E8DCC8;
+  --theme-card-bg: #FFFFFF;
+  --theme-card-border: #E8DCC8;
+  --theme-input-bg: #FFFFFF;
+  --theme-table-head: #F8FAFC;
+}
+
+[data-theme="dark"] {
+  /* Official LYKA Dark Theme Tokens */
+  --theme-bg: #1A0E1F;
+  --theme-surface: #25172C;
+  --theme-surface-elevated: #2D1A36;
+  --theme-primary: #53345F;
+  --theme-secondary: #3B2348;
+  --theme-accent: #E2C98D;
+  --theme-soft-accent: #E2C98D;
+  --theme-gold: #C6A15B;
+  --theme-text: #FBF8F3;
+  --theme-secondary-text: #D4C3AC;
+  --theme-muted: #D4C3AC;
+  --theme-border: #53345F;
+  --theme-card-bg: #25172C;
+  --theme-card-border: #53345F;
+  --theme-input-bg: #2D1A36;
+  --theme-table-head: #201326;
+
+  /* Overwrite global tokens in Dark Mode */
+  --bg-white: #1A0E1F;
+  --bg-warm-gray: #25172C;
+  --bg-surface: #25172C;
+  --text-main: #FBF8F3;
+  --text-secondary: #D4C3AC;
+  --text-muted: #D4C3AC;
+  --champagne-light: #1A0E1F;
+  --champagne-surface: #25172C;
+  --champagne-card: #25172C;
+  --champagne-border: #53345F;
+  --champagne-muted: #2D1A36;
+  --border-light: #53345F;
+  --border-subtle: #45244E;
+  --ivory-bg: #1A0E1F;
+  --ivory-surface: #25172C;
+  --ivory-border: #53345F;
+  --navy-card: #25172C;
+  --navy-surface: #2D1A36;
 }
 
 * {
@@ -99,6 +216,7 @@ body {
   background-color: var(--bg-white);
   color: var(--text-main);
   line-height: 1.6;
+  transition: background-color 0.2s ease, color 0.2s ease;
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -255,4 +373,248 @@ input, select, textarea {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Loading placeholders + screen-reader-only status text. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lyka-skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, #F3EDDF 25%, #FAF7F0 45%, #F3EDDF 65%);
+  background-size: 240% 100%;
+  animation: lyka-shimmer 1.5s ease-in-out infinite;
+}
+
+.lyka-skeleton-card {
+  border-radius: 14px;
+  border: 1px solid var(--champagne-border);
+  background: linear-gradient(90deg, #F3EDDF 25%, #FAF7F0 45%, #F3EDDF 65%);
+  background-size: 240% 100%;
+  animation: lyka-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes lyka-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyka-skeleton,
+  .lyka-skeleton-card {
+    animation: none;
+  }
+}
+
+/* ========================================================
+   Shared LYKA CRM form controls (Lead / Enquiry / Property pages)
+   Ivory surfaces, champagne borders, gold focus rings.
+   ======================================================== */
+.lyka-field {
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid var(--champagne-border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  color: var(--text-main);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.lyka-field::placeholder {
+  color: #B9B0A6;
+}
+.lyka-field:focus {
+  outline: none;
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 3px rgba(197, 168, 105, 0.25);
+}
+.lyka-field:focus-visible {
+  outline: none;
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 3px rgba(197, 168, 105, 0.35);
+}
+.lyka-field:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+select.lyka-field {
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A7B85' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+
+/* ========================================================
+   MODERN CRM COLOR SYSTEM & LEAD STATUS CLASSES
+   Midnight Navy, Teal, Light Ivory, Soft Lavender,
+   Coral Red (Hot), Amber (Warm), Sky Blue (Cold)
+   ======================================================== */
+.badge-hot {
+  background-color: var(--lead-hot-bg, #FEF2F2);
+  color: #DC2626;
+  border: 1px solid var(--lead-hot-border, #FECACA);
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-warm {
+  background-color: var(--lead-warm-bg, #FEF3C7);
+  color: #D97706;
+  border: 1px solid var(--lead-warm-border, #FDE68A);
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-cold {
+  background-color: var(--lead-cold-bg, #E0F2FE);
+  color: #0284C7;
+  border: 1px solid var(--lead-cold-border, #BAE6FD);
+  font-weight: 700;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.crm-card {
+  background: var(--ivory-surface, #FFFFFF);
+  border: 1px solid var(--ivory-border, #E5E2D9);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(23, 42, 70, 0.05);
+  padding: 20px;
+}
+.crm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.crm-table th {
+  background: var(--ivory-bg, #F8F7F2);
+  color: var(--navy-primary, #172A46);
+  font-weight: 700;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ivory-border, #E5E2D9);
+  text-align: left;
+}
+.crm-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--ivory-border, #E5E2D9);
+  color: #2D3748;
+}
+.crm-table tr:hover td {
+  background-color: rgba(198, 161, 91, 0.05);
+}
+
+
+
+/* ========================================================
+   LYKA REALTY DARK THEME SYSTEM
+   Deep Plum, Elegant Gold, Warm Cream on Dark Shades
+   ======================================================== */
+[data-theme="dark"] {
+  --bg-white: #1A0E1F;
+  --bg-warm-gray: #24142B;
+  --bg-surface: #2D1A36;
+  --text-main: #FAF7F0;
+  --text-secondary: #E2C98D;
+  --text-muted: #A895A4;
+  --text-gold: #E2C98D;
+
+  --ivory-bg: #1A0E1F;
+  --ivory-surface: #2D1A36;
+  --ivory-border: #4A2B58;
+  --ivory-muted: #331A3D;
+
+  --champagne-light: #24142B;
+  --champagne-surface: #2D1A36;
+  --champagne-card: #331A3D;
+  --champagne-muted: #3B2046;
+  --champagne-border: #4A2B58;
+  --champagne-dark: #A68748;
+
+  --border-light: #4A2B58;
+  --border-subtle: #3B2046;
+
+  --navy-card: #2D1A36;
+  --navy-border: #4A2B58;
+}
+
+[data-theme="dark"] body {
+  background-color: var(--bg-white);
+  color: var(--text-main);
+}
+
+[data-theme="dark"] .crm-card {
+  background: #1E101D;
+  border-color: #3D2439;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .crm-table th {
+  background: #180D17;
+  color: #FBF8F3;
+  border-bottom-color: #3D2439;
+}
+
+[data-theme="dark"] .crm-table td {
+  border-bottom-color: #3D2439;
+  color: #E2D8DE;
+}
+
+[data-theme="dark"] .crm-table tr:hover td {
+  background-color: rgba(197, 168, 105, 0.08);
+}
+
+[data-theme="dark"] .uae-card {
+  background: #1E101D !important;
+  border-color: #3D2439 !important;
+  color: #FBF8F3 !important;
+}
+
+[data-theme="dark"] .uae-card-title {
+  color: #FBF8F3 !important;
+}
+
+[data-theme="dark"] .uae-stat-box {
+  background: #251424 !important;
+  border-color: #3D2439 !important;
+}
+
+[data-theme="dark"] .portal-main-area {
+  background: #120A11 !important;
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #180D17 !important;
+  color: #FBF8F3 !important;
+  border-color: #3D2439 !important;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: var(--gold-primary) !important;
+  box-shadow: 0 0 0 2px rgba(197, 168, 105, 0.3) !important;
 }

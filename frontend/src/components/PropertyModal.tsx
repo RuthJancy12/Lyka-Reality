@@ -1,9 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   X, Heart, Bed, Bath, Maximize2, Car, Compass,
-  ShieldCheck, Share2, CheckCircle2, MessageSquare, Calendar
+  ShieldCheck, Share2, CheckCircle2, MessageSquare, Calendar, AlertCircle
 } from 'lucide-react'
 import type { Property } from '../types/property'
+import { submitPublicEnquiry, formatApiErrorMessage } from '../services/api'
+import { trackPropertyEvent } from '../services/propertyAnalytics'
+import { collectLeadSource, normalizeDiscoverySource } from '../utils/leadSource'
+import { DiscoverySourceSelect } from './DiscoverySourceSelect'
+import { SmartPropertyIntelligence } from './SmartPropertyIntelligence'
+import { VirtualPropertyTour } from './VirtualPropertyTour'
 
 interface PropertyModalProps {
   property: Property | null
@@ -16,7 +22,18 @@ interface PropertyModalProps {
 export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleFavorite }: PropertyModalProps) {
   const [activeImageIdx, setActiveImageIdx] = useState(0)
   const [formSubmitted, setFormSubmitted] = useState(false)
-  const [formData, setFormData] = useState({ name: '', phone: '', email: '', preferredDate: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [formData, setFormData] = useState({ name: '', phone: '', email: '', preferredDate: '', discoverySource: '' })
+  const [modalTab, setModalTab] = useState<'overview' | 'intelligence' | 'virtual_tour'>('overview')
+
+  // A view is recorded when the detail modal is actually opened for a real
+  // listing. Server-side dedupe is per visitor/property/hour.
+  useEffect(() => {
+    if (isOpen && property) {
+      trackPropertyEvent(property.property_id, 'view', 'modal')
+    }
+  }, [isOpen, property])
 
   if (!isOpen || !property) return null
 
@@ -26,12 +43,39 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
     maximumFractionDigits: 0
   }).format(property.price_aed)
 
-  const handleInquirySubmit = (e: React.FormEvent) => {
+  const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setFormSubmitted(true)
-    setTimeout(() => {
-      setFormSubmitted(false)
-    }, 4000)
+    if (submitting || !property) return
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await submitPublicEnquiry({
+        customer_name: formData.name.trim(),
+        contact_email: formData.email.trim(),
+        contact_phone: formData.phone.trim() || undefined,
+        property_ref: property.property_id,
+        property_title: property.title,
+        location: property.location,
+        lead_type: property.listing_type === 'Rent' ? 'renter' : 'buyer',
+        property_type: property.property_type,
+        preferred_date: formData.preferredDate || undefined,
+        discovery_source: normalizeDiscoverySource(formData.discoverySource),
+        ...collectLeadSource(),
+      })
+      // Success is shown ONLY after the backend confirms the save (HTTP 201).
+      setFormSubmitted(true)
+      setTimeout(() => {
+        setFormSubmitted(false)
+      }, 4000)
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : formatApiErrorMessage(err, 'Failed to send enquiry. Please try again.')
+      )
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const galleryImages = property.image_gallery && property.image_gallery.length > 0
@@ -65,6 +109,7 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
       overflowY: 'auto'
     }}>
       <div
+        className="propmodal-outer"
         style={{
           width: '100%',
           maxWidth: '960px',
@@ -147,10 +192,77 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
           </div>
         </div>
 
-        <div style={{ padding: '24px' }}>
+        {/* Modal Navigation Tabs: Overview, Smart Intelligence, Virtual Tour */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '10px 24px',
+            background: 'var(--theme-surface-elevated, #FAF7F0)',
+            borderBottom: '1px solid var(--theme-border, #E8DCC8)',
+            flexWrap: 'wrap',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setModalTab('overview')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: '6px',
+              border: modalTab === 'overview' ? '1px solid var(--theme-primary, #3B2348)' : '1px solid transparent',
+              background: modalTab === 'overview' ? 'var(--theme-primary, #3B2348)' : 'transparent',
+              color: modalTab === 'overview' ? '#FFFFFF' : 'var(--theme-text, #26232B)',
+              fontWeight: 700,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+            }}
+          >
+            📋 Listing Overview
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalTab('intelligence')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: '6px',
+              border: modalTab === 'intelligence' ? '1px solid var(--theme-primary, #3B2348)' : '1px solid transparent',
+              background: modalTab === 'intelligence' ? 'var(--theme-primary, #3B2348)' : 'transparent',
+              color: modalTab === 'intelligence' ? '#FFFFFF' : 'var(--theme-text, #26232B)',
+              fontWeight: 700,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+            }}
+          >
+            🧠 Smart Property Intelligence
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalTab('virtual_tour')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: '6px',
+              border: modalTab === 'virtual_tour' ? '1px solid var(--theme-primary, #3B2348)' : '1px solid transparent',
+              background: modalTab === 'virtual_tour' ? 'var(--theme-primary, #3B2348)' : 'transparent',
+              color: modalTab === 'virtual_tour' ? '#FFFFFF' : 'var(--theme-text, #26232B)',
+              fontWeight: 700,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+            }}
+          >
+            🔄 360° Virtual Tour &amp; Walkthrough
+          </button>
+        </div>
+
+        <div className="propmodal-body" style={{ padding: '24px' }}>
+          {modalTab === 'intelligence' ? (
+            <SmartPropertyIntelligence property={property} />
+          ) : modalTab === 'virtual_tour' ? (
+            <VirtualPropertyTour property={property} onRequestViewing={() => setModalTab('overview')} />
+          ) : (
+            <>
           {/* Gallery View */}
           <div style={{ marginBottom: '24px' }}>
-            <div style={{
+            <div className="propmodal-gallery" style={{
               width: '100%',
               height: '400px',
               borderRadius: '8px',
@@ -162,6 +274,11 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
               <img
                 src={galleryImages[activeImageIdx] || property.image_url}
                 alt={property.title}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                width="800"
+                height="400"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               <div style={{
@@ -199,7 +316,7 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
                       padding: 0
                     }}
                   >
-                    <img src={img} alt={`thumb-${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={img} alt={`thumb-${idx}`} loading="lazy" decoding="async" width="76" height="56" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </button>
                 ))}
               </div>
@@ -227,7 +344,7 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
                 {formattedPrice} {property.listing_type === 'Rent' && <span style={{ fontSize: '15px', color: 'var(--text-secondary)' }}>/ year</span>}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                AED {property.price_per_sqft_aed.toLocaleString()} / sqft
+                AED {property.price_per_sqft_aed.toLocaleString('en-US')} / sqft
                 {property.rent_cheques && ` &bull; Payable in ${property.rent_cheques} Cheques`}
               </div>
             </div>
@@ -257,7 +374,7 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
           </div>
 
           {/* Details & Inquiry Two-Column Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px', marginBottom: '24px' }}>
             {/* Left: Property Specifications */}
             <div>
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--plum-deep)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -360,6 +477,22 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
                 </div>
               ) : (
                 <form onSubmit={handleInquirySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {submitError && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      padding: '10px 12px',
+                      background: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: '#991B1B'
+                    }} role="alert">
+                      <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '3px' }}>
                       Full Name *
@@ -450,14 +583,24 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
                     />
                   </div>
 
-                  <button type="submit" className="gold-btn" style={{ width: '100%', marginTop: '4px', padding: '10px' }}>
-                    <Calendar size={15} /> Book Viewing
+                  <DiscoverySourceSelect
+                    id="lyka-enquiry-discovery-source"
+                    value={formData.discoverySource}
+                    onChange={(v) => setFormData({ ...formData, discoverySource: v })}
+                    variant="form"
+                    labelStyle={{ fontSize: '11px', marginBottom: '3px' }}
+                    selectStyle={{ padding: '9px 10px' }}
+                  />
+
+                  <button type="submit" disabled={submitting} className="gold-btn" style={{ width: '100%', marginTop: '4px', padding: '10px', opacity: submitting ? 0.6 : 1 }}>
+                    <Calendar size={15} /> {submitting ? 'Sending…' : 'Book Viewing'}
                   </button>
 
                   <a
                     href={`https://wa.me/97148005952?text=Hello%20Lyka%20Realty,%20I%20am%20interested%20in%20${encodeURIComponent(property.title)}%20(Ref:%20${property.property_id})`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackPropertyEvent(property.property_id, 'whatsapp_click', 'whatsapp')}
                     className="outline-navy-btn"
                     style={{ width: '100%', padding: '9px' }}
                   >
@@ -472,6 +615,8 @@ export function PropertyModal({ property, isOpen, onClose, isFavorite, onToggleF
               </div>
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

@@ -7,11 +7,15 @@ interface SummaryCardProps {
   requirements: UserRequirements
   onConfirm: () => void
   onUpdateRequirements: (updated: UserRequirements) => void
+  /** Real dataset communities (most stocked first). Falls back to the
+   * built-in list when the backend is unreachable. */
+  locations?: string[]
 }
 
-export function SummaryCard({ requirements, onConfirm, onUpdateRequirements }: SummaryCardProps) {
+export function SummaryCard({ requirements, onConfirm, onUpdateRequirements, locations }: SummaryCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState<UserRequirements>({ ...requirements })
+  const locationOptions = locations && locations.length > 0 ? locations : DUBAI_LOCATIONS
 
   const handleSaveEdit = () => {
     onUpdateRequirements(draft)
@@ -50,7 +54,7 @@ export function SummaryCard({ requirements, onConfirm, onUpdateRequirements }: S
           </div>
           <div>
             <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--plum-deep)', margin: 0 }}>
-              Search Summary
+              Search Criteria
             </h4>
             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
               Verify criteria or edit parameters inline
@@ -135,7 +139,7 @@ export function SummaryCard({ requirements, onConfirm, onUpdateRequirements }: S
                 }}
               >
                 <option value="">All Dubai Communities</option>
-                {DUBAI_LOCATIONS.map((loc) => (
+                {locationOptions.map((loc) => (
                   <option key={loc} value={loc}>{loc}</option>
                 ))}
               </select>
@@ -206,7 +210,38 @@ export function SummaryCard({ requirements, onConfirm, onUpdateRequirements }: S
                 step="50000"
                 placeholder="e.g. 2500000"
                 value={draft.budget || ''}
-                onChange={(e) => setDraft({ ...draft, budget: e.target.value ? parseFloat(e.target.value) : null })}
+                disabled={draft.budgetFlexible === true}
+                onChange={(e) => setDraft({ ...draft, budget: e.target.value ? parseFloat(e.target.value) : null, budgetFlexible: null })}
+                style={{
+                  width: '100%',
+                  padding: '7px 9px',
+                  borderRadius: '4px',
+                  border: '1px solid var(--champagne-border)',
+                  background: draft.budgetFlexible === true ? 'var(--champagne-surface)' : '#FFFFFF',
+                  fontSize: '12px',
+                  color: 'var(--text-main)',
+                  outlineColor: 'var(--gold-primary)'
+                }}
+              />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-main)', cursor: 'pointer', marginTop: '6px' }}>
+                <input
+                  type="checkbox"
+                  checked={draft.budgetFlexible === true}
+                  onChange={(e) => setDraft({ ...draft, budgetFlexible: e.target.checked ? true : null, budget: e.target.checked ? null : draft.budget })}
+                  style={{ accentColor: 'var(--gold-dark)' }}
+                />
+                Not sure — show all budgets
+              </label>
+            </div>
+
+            {/* Timeline */}
+            <div>
+              <label style={{ display: 'block', fontSize: '10px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '3px' }}>
+                Timeline
+              </label>
+              <select
+                value={draft.timeline || ''}
+                onChange={(e) => setDraft({ ...draft, timeline: e.target.value || null })}
                 style={{
                   width: '100%',
                   padding: '7px 9px',
@@ -217,7 +252,14 @@ export function SummaryCard({ requirements, onConfirm, onUpdateRequirements }: S
                   color: 'var(--text-main)',
                   outlineColor: 'var(--gold-primary)'
                 }}
-              />
+              >
+                <option value="">Flexible</option>
+                <option value="Immediate">Immediate</option>
+                <option value="Within 3 months">Within 3 months</option>
+                <option value="3–6 months">3–6 months</option>
+                <option value="Flexible">Flexible — no fixed date</option>
+                <option value="Just browsing">Just browsing</option>
+              </select>
             </div>
           </div>
 
@@ -240,6 +282,16 @@ export function SummaryCard({ requirements, onConfirm, onUpdateRequirements }: S
                 style={{ accentColor: 'var(--gold-dark)' }}
               />
               Beachfront
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-main)', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={draft.parking === true}
+                onChange={(e) => setDraft({ ...draft, parking: e.target.checked ? true : null })}
+                style={{ accentColor: 'var(--gold-dark)' }}
+              />
+              Parking
             </label>
           </div>
 
@@ -307,7 +359,16 @@ export function SummaryCard({ requirements, onConfirm, onUpdateRequirements }: S
               Budget Ceiling
             </span>
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--plum-deep)' }}>
-              {requirements.budget ? `AED ${requirements.budget.toLocaleString()}` : 'Market Range'}
+              {requirements.budget ? `AED ${requirements.budget.toLocaleString('en-US')}` : requirements.budgetFlexible ? 'Flexible' : 'Not specified'}
+            </span>
+          </div>
+
+          <div>
+            <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--rose-primary)', fontWeight: 700, display: 'block' }}>
+              Timeline
+            </span>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--plum-deep)' }}>
+              {requirements.timeline || 'Flexible'}
             </span>
           </div>
 
@@ -318,8 +379,18 @@ export function SummaryCard({ requirements, onConfirm, onUpdateRequirements }: S
             <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
               {[
                 requirements.nearMetro && 'Near Metro',
-                requirements.beachfront && 'Beachfront'
+                requirements.beachfront && 'Beachfront',
+                requirements.parking && 'Parking'
               ].filter(Boolean).join(' • ') || 'Standard Luxury'}
+            </span>
+          </div>
+
+          <div>
+            <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--rose-primary)', fontWeight: 700, display: 'block' }}>
+              Amenities
+            </span>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {requirements.amenities.length > 0 ? requirements.amenities.join(' • ') : 'Not specified'}
             </span>
           </div>
         </div>

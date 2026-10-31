@@ -1,4 +1,5 @@
-import { Mail, Phone, MapPin, ShieldCheck, Globe } from 'lucide-react'
+import { Mail, Phone, MapPin, ShieldCheck, Globe, Briefcase } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 export function Footer() {
   return (
@@ -134,10 +135,13 @@ export function Footer() {
           <div>
             &copy; 2026 Lyka Realty Real Estate LLC. All rights reserved.
           </div>
-          <div style={{ display: 'flex', gap: '20px' }}>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
             <a href="#" style={{ color: '#8A7B85', transition: 'color 0.2s' }} onMouseOver={(e) => (e.currentTarget.style.color = 'var(--gold-hover)')} onMouseOut={(e) => (e.currentTarget.style.color = '#8A7B85')}>Privacy Policy</a>
             <a href="#" style={{ color: '#8A7B85', transition: 'color 0.2s' }} onMouseOver={(e) => (e.currentTarget.style.color = 'var(--gold-hover)')} onMouseOut={(e) => (e.currentTarget.style.color = '#8A7B85')}>Terms of Use</a>
             <a href="#" style={{ color: '#8A7B85', transition: 'color 0.2s' }} onMouseOver={(e) => (e.currentTarget.style.color = 'var(--gold-hover)')} onMouseOut={(e) => (e.currentTarget.style.color = '#8A7B85')}>DLD Regulatory Statement</a>
+            <Link to="/crm" style={{ color: '#8A7B85', transition: 'color 0.2s', display: 'inline-flex', alignItems: 'center', gap: '5px', textDecoration: 'none' }} onMouseOver={(e) => (e.currentTarget.style.color = 'var(--gold-hover)')} onMouseOut={(e) => (e.currentTarget.style.color = '#8A7B85')} title="Staff sign-in for the LYKA team (roles verified by the server)">
+              <Briefcase size={12} /> Employee Login
+            </Link>
           </div>
         </div>
       </div>

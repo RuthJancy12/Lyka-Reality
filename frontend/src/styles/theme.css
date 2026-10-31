@@ -1,0 +1,30 @@
+/* LYKA Realty Design System Tokens */
+:root {
+  /* Brand Luxury Palette */
+  --brand-plum: #1A0B2E;
+  --brand-purple: #3B2348;
+  --brand-gold: #C6A15B;
+  --brand-gold-primary: #D4AF37;
+  --brand-gold-dark: #8C6D23;
+  --brand-champagne-light: #FAF7F0;
+  --brand-ivory: #F8F7F2;
+
+  /* Modern Foundation Tokens */
+  --navy-primary: #172A46;
+  --navy-deep: #0D1B2A;
+  --navy-surface: #1E3A5F;
+  --navy-card: #FFFFFF;
+  --navy-border: #2D4A77;
+
+  /* Accent */
+  --teal-accent: #11B5A4;
+  --teal-hover: #0E9B8C;
+  --teal-light: #E6F8F6;
+  --teal-border: rgba(17, 181, 164, 0.4);
+
+  /* Lead Status Badges */
+  --badge-hot: #FF6B6B;
+  --badge-warm: #F59E0B;
+  --badge-cold: #0EA5E9;
+}
+

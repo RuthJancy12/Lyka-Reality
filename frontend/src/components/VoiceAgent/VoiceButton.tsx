@@ -49,7 +49,7 @@ export function VoiceButton({
       case 'THINKING':
         return 'var(--gold-primary, #C5A059)' // Warm gold
       case 'SPEAKING':
-        return '#3B82F6' // Bright blue voice wave
+        return '#C6A15B' // Luxury Gold voice wave
       case 'ERROR':
         return '#EF4444' // Error red
       case 'CONNECTING':

@@ -32,6 +32,15 @@ export interface Property {
   image_gallery: string[]
   listed_days_ago: number
   image_caption?: string
+  /** Backend-calculated match assessment (chat search only). Absent on grid data. */
+  match_score?: number
+  match_reasons?: string[]
+  mismatches?: string[]
+  /** Nearby-community fallback (dataset search / CRM matcher). Flags an
+   * alternative from a neighbouring community, never the requested one. */
+  isNearbyAlternative?: boolean
+  nearbyRequestedLocation?: string
+  actualLocation?: string
 }
 
 export interface PropertyFilters {

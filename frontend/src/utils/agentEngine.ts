@@ -27,6 +27,7 @@ export const INITIAL_REQUIREMENTS: UserRequirements = {
   propertyType: null,
   bhk: null,
   budget: null,
+  timeline: null,
   nearMetro: null,
   beachfront: null,
   amenities: []
@@ -115,7 +116,7 @@ export function parseUserInput(text: string, current: UserRequirements): {
       changedFields.push('bhk')
     }
   } else {
-    const bhkMatch = lower.match(/(\d+)\s*(?:bhk|bed|bedroom|br)/)
+    const bhkMatch = lower.match(/(\d+)[\s-]*(?:bhk|bed|bedroom|br)/)
     if (bhkMatch) {
       const num = parseInt(bhkMatch[1], 10)
       if (!isNaN(num) && updated.bhk !== num) {
@@ -205,6 +206,23 @@ export function parseUserInput(text: string, current: UserRequirements): {
       updated.amenities.push(label)
       if (!changedFields.includes('amenities')) {
         changedFields.push('amenities')
+      }
+    }
+  }
+
+  // 9. Timeline (move-in urgency — collected for context, not a search filter)
+  const timelineBuckets: Array<[RegExp, string]> = [
+    [/\b(immediately|immediate|asap|as soon as possible|urgently|urgent|right away|this week|this month)\b/, 'Immediate'],
+    [/within\s*(1|2|3)\s*months?|in\s*(a|1|2|3)\s*months?|(1|2|3)[\s-]*months?\b/, 'Within 3 months'],
+    [/within\s*(4|5|6)\s*months?|(4|5|6)[\s-]*months?|half a year/, '3–6 months'],
+    [/\b(just browsing|browsing|researching|exploring|no rush|not urgent|whenever)\b/, 'Just browsing'],
+  ]
+  if (updated.timeline === null) {
+    for (const [re, bucket] of timelineBuckets) {
+      if (re.test(lower)) {
+        updated.timeline = bucket
+        changedFields.push('timeline')
+        break
       }
     }
   }
@@ -299,7 +317,7 @@ export function generateMatchExplanation(property: Property, req: UserRequiremen
   if (req.budget !== null && property.price_aed <= req.budget) {
     const diff = req.budget - property.price_aed
     if (diff > 50000) {
-      reasons.push(`comfortably within your budget (AED ${Math.round(diff).toLocaleString()} under ceiling)`)
+      reasons.push(`comfortably within your budget (AED ${Math.round(diff).toLocaleString('en-US')} under ceiling)`)
     } else {
       reasons.push(`matches your exact budget ceiling`)
     }

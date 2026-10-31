@@ -15,7 +15,6 @@ export function BackendStatusIndicator() {
       const data = await getBackendHealth()
       setStatus('connected')
       setResponse(data)
-      console.log('Backend Connected', data)
     } catch (err) {
       setStatus('disconnected')
       const msg = err instanceof Error ? err.message : 'Unknown error'
@@ -34,23 +33,26 @@ export function BackendStatusIndicator() {
 
   const isConnected = status === 'connected'
   const isChecking = status === 'checking'
+  const isDbConnected = response?.database?.status === 'connected'
   const isOllamaOnline = response?.ollama?.status === 'online'
 
-  const dotColor = isChecking
-    ? '#EAB308'
-    : isConnected
-    ? isOllamaOnline
-      ? '#10B981'
-      : '#F59E0B'
-    : '#EF4444'
-
-  const statusText = isChecking
-    ? 'Checking Services...'
-    : isConnected
-    ? isOllamaOnline
-      ? 'Ollama AI Connected'
-      : 'Backend On (Ollama Off)'
-    : 'Backend Disconnected'
+  let dotColor = '#EF4444'
+  let statusText = 'Backend Disconnected'
+  if (isChecking) {
+    dotColor = '#EAB308'
+    statusText = 'Checking Services...'
+  } else if (isConnected) {
+    if (isDbConnected && isOllamaOnline) {
+      dotColor = '#10B981'
+      statusText = 'All Systems Operational'
+    } else if (isDbConnected) {
+      dotColor = '#10B981'
+      statusText = 'Backend & DB Online'
+    } else {
+      dotColor = '#F59E0B'
+      statusText = 'Backend Online (DB Degraded)'
+    }
+  }
 
   return (
     <aside

@@ -1,92 +1,139 @@
-# Lyka Realty – Backend API
+# LYKA Realty — Backend API Service
 
-## Backend Purpose
-The backend provides API services for **Lyka Realty – AI Property Recommendation & Lead Qualification System**. This Step 1 foundation sets up the core FastAPI application, CORS middleware to allow communication with the frontend, and a health check endpoint.
+High-performance, secure backend API for the LYKA Realty platform built with FastAPI, SQLAlchemy ORM, PostgreSQL (Supabase Cloud), and Firebase Authentication.
 
 ---
 
-## 1. How to Install Dependencies
+## Architecture Overview
 
-Make sure Python (version 3.10+) is installed. Navigate to the `backend` directory:
+```text
+backend/
+├── app/
+│   ├── api/             # Centralized routing & endpoint aggregation
+│   │   ├── routes.py    # Main API router combining all domain routers
+│   │   └── __init__.py
+│   ├── core/            # System configuration & security policies
+│   │   ├── config.py    # Environment variables & runtime settings
+│   │   ├── security.py  # User roles, RBAC permissions, token helpers
+│   │   └── __init__.py
+│   ├── database/        # Database session & migration engine
+│   │   └── __init__.py  # SessionLocal, Base, engine, get_db, migrate()
+│   ├── middleware/      # Application middleware
+│   │   ├── cors.py      # CORS setup for web and mobile clients
+│   │   ├── security.py  # HTTP security headers (CSP, HSTS, X-Frame)
+│   │   ├── rate_limit.py# In-memory sliding window rate limiter
+│   │   └── __init__.py
+│   ├── models/          # SQLAlchemy ORM models
+│   │   └── __init__.py  # Leads, Staff, CustomerProfile, Properties, HRMS
+│   ├── schemas/         # Pydantic v2 data validation schemas
+│   │   └── __init__.py  # Request/response validation contracts
+│   ├── services/        # Business logic & external service integrations
+│   │   ├── firebase_auth.py       # Firebase token verification & claims
+│   │   ├── ollama_chat_service.py # Local Ollama LLM conversation engine
+│   │   ├── lead_service.py        # Lead scoring, routing, and continuity
+│   │   ├── property_analytics.py  # Inventory analytics and ads seeding
+│   │   └── hrms_service.py        # Leave calculation, payroll, attendance
+│   ├── utils/           # Formatting and helper utilities
+│   │   ├── formatting.py# Currency (AED) & phone formatting
+│   │   ├── helpers.py   # UUID, timestamp helpers
+│   │   └── __init__.py
+│   └── main.py          # Application entrypoint & lifespan handlers
+├── tests/               # Comprehensive integration & unit test suite (42 suites)
+│   ├── conftest.py      # Universal test path resolution
+│   ├── test_all_rectifications_sqlite.py
+│   ├── test_models_sqlite.py
+│   ├── test_admin_team_management.py
+│   └── ...
+├── render.yaml          # Render Cloud deployment blueprint
+├── requirements.txt     # Python dependencies
+├── .env.example         # Environment template
+└── README.md            # This documentation
+```
 
-```bash
+---
+
+## Key Features
+
+1. **Strict Role-Based Access Control (RBAC)**:
+   - Differentiates between `admin`, `hrms_admin`, `sales_agent`, and `customer`.
+   - Customer-only AI enforcement ensures internal staff cannot accidentally expose or invoke consumer concierge endpoints.
+   - HRMS Admin permissions are strictly restricted to employee directory, leave, payroll, and recruitment.
+
+2. **Automated Sales Continuity**:
+   - Dynamic agent availability checking: automatically detects `on_leave` or inactive status.
+   - Lead coverage delegation ensures hot leads are never neglected while agents are on approved leave.
+
+3. **Supabase Cloud PostgreSQL Pipeline**:
+   - Connection pooler integration on AWS Sydney (`aws-0-ap-southeast-2.pooler.supabase.com`).
+   - Dynamic startup migration verifying all required columns (`do_not_disturb`, `coverage_agent_id`, etc.).
+
+4. **Multi-Model AI Integration**:
+   - Primary: Local Ollama `llama3.2:3b` with Dubai real estate context injection.
+   - Fallback: OpenAI `gpt-4o-mini` and rule-based concierge.
+
+---
+
+## Local Development Setup
+
+### 1. Prerequisites
+- Python 3.11+
+- Virtual environment (`venv`)
+
+### 2. Environment Setup
+```powershell
+# Navigate to backend directory
 cd backend
-```
 
-Create and activate a virtual environment (optional but recommended):
+# Create virtual environment
+python -m venv .venv
 
-```bash
-# On Windows
-python -m venv venv
-.\venv\Scripts\activate
+# Activate virtual environment
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# Linux/macOS:
+source .venv/bin/activate
 
-# On macOS/Linux
-python3 -m venv venv
-source venv/bin/activate
-```
-
-Install the required dependencies:
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
+### 3. Configure Environment Variables
+Copy `.env.example` to `.env`:
+```powershell
+cp .env.example .env
+```
+Update `DATABASE_URL` with your Supabase PostgreSQL connection string or use SQLite for offline testing.
+
+### 4. Run Development Server
+```powershell
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+Interactive API docs available at:
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
 ---
 
-## 2. How to Start the Server
+## Running Backend Tests
 
-Run the development server from the `backend` directory using Uvicorn:
+All test suites are centralized in `backend/tests/`. Each test file is self-resolving and can be run independently:
 
-```bash
-uvicorn app.main:app --reload --port 8000
-```
+```powershell
+# In-memory SQLite integration tests (runs in < 5 seconds without cloud network access)
+python backend/tests/test_all_rectifications_sqlite.py
+python backend/tests/test_models_sqlite.py
 
-The application will be accessible at:
-- Base URL: `http://127.0.0.1:8000`
-- Interactive API Docs (Swagger UI): `http://127.0.0.1:8000/docs`
-
----
-
-## 3. How to Test the Health Endpoint
-
-### In the Browser or via HTTP Client
-Navigate to:
-[http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
-
-### Using cURL
-```bash
-curl http://127.0.0.1:8000/api/health
-```
-
-### Expected JSON Response
-```json
-{
-  "status": "ok",
-  "message": "Lyka Realty backend is running"
-}
+# Live Supabase PostgreSQL suites (requires active internet access)
+python backend/tests/test_roles_suite.py
+python backend/tests/test_admin_team_management.py
+python backend/tests/test_lead_list.py
 ```
 
 ---
 
-## 4. How to Test the Gemini AI Endpoint
+## Production Deployment (Render)
 
-### Configuration
-Ensure `backend/.env` contains your Gemini API key:
-```env
-GEMINI_API_KEY=your_gemini_api_key_here
-```
-
-### Using cURL
-```bash
-curl -X POST http://127.0.0.1:8000/api/gemini/test \
-  -H "Content-Type: application/json" \
-  -d "{\"message\": \"Hello, tell me about Dubai real estate in one sentence.\"}"
-```
-
-### Expected JSON Response
-```json
-{
-  "response": "Hello, the Dubai real estate market is a highly dynamic, tax-free global hub renowned for its luxury properties, innovative developments, and strong investment returns."
-}
-```
-
+The backend is configured for 1-click deployment on Render using `render.yaml`:
+- **Build Command**: `pip install -r requirements.txt`
+- **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- **Health Check**: `GET /api/health`

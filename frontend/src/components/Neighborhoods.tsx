@@ -1,4 +1,6 @@
-import { ArrowRight } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowRight, Scale } from 'lucide-react'
+import { NeighborhoodComparisonModal } from './NeighborhoodComparisonModal'
 
 interface NeighborhoodsProps {
   onSelectNeighborhood: (location: string) => void
@@ -48,6 +50,7 @@ const COMMUNITIES = [
 ]
 
 export function Neighborhoods({ onSelectNeighborhood }: NeighborhoodsProps) {
+  const [showCompareModal, setShowCompareModal] = useState(false)
   return (
     <section id="communities" style={{ padding: '90px 0', background: 'var(--champagne-light)', borderBottom: '1px solid var(--champagne-border)' }}>
       <div className="container">
@@ -78,20 +81,42 @@ export function Neighborhoods({ onSelectNeighborhood }: NeighborhoodsProps) {
               Explore Dubai Communities
             </h2>
           </div>
-          <p style={{
-            color: 'var(--text-secondary)',
-            maxWidth: '460px',
-            fontSize: '14px',
-            margin: 0,
-            lineHeight: 1.5
-          }}>
-            Discover Dubai&apos;s most sought-after residential and investment neighborhoods with curated community insights.
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-start' }}>
+            <p style={{
+              color: 'var(--text-secondary)',
+              maxWidth: '460px',
+              fontSize: '14px',
+              margin: 0,
+              lineHeight: 1.5
+            }}>
+              Discover Dubai&apos;s most sought-after residential and investment neighborhoods with curated community insights.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowCompareModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: 'var(--theme-primary, #3B2348)',
+                color: '#FFFFFF',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                border: '1px solid var(--theme-border, #E8DCC8)',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+              }}
+            >
+              <Scale size={14} color="var(--theme-accent, #C6A15B)" /> Compare Neighborhood Lifestyle Scores
+            </button>
+          </div>
         </div>
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
           gap: '24px'
         }}>
           {COMMUNITIES.map((c, idx) => (
@@ -123,6 +148,10 @@ export function Neighborhoods({ onSelectNeighborhood }: NeighborhoodsProps) {
               <img
                 src={c.image}
                 alt={c.name}
+                loading="lazy"
+                decoding="async"
+                width="400"
+                height="280"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
 
@@ -174,6 +203,12 @@ export function Neighborhoods({ onSelectNeighborhood }: NeighborhoodsProps) {
           ))}
         </div>
       </div>
+
+      <NeighborhoodComparisonModal
+        isOpen={showCompareModal}
+        onClose={() => setShowCompareModal(false)}
+        onSelectCommunity={onSelectNeighborhood}
+      />
     </section>
   )
 }

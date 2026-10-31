@@ -1,0 +1,269 @@
+/* WhatsApp-style conversation history rail (LYKA palette). */
+.lyka-history {
+  width: 296px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #FBF8F3;
+  border-right: 1px solid #EDE3D5;
+  animation: lyka-history-in 0.18s ease;
+}
+
+@keyframes lyka-history-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.lyka-history-backdrop { display: none; }
+
+.lyka-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid #EDE3D5;
+  background: linear-gradient(120deg, #FBF3EC 0%, #F9EFF3 100%);
+}
+
+.lyka-history-heading { min-width: 0; }
+.lyka-history-heading h4 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #2A1426;
+}
+.lyka-history-heading span {
+  display: block;
+  margin-top: 1px;
+  font-size: 10.5px;
+  color: #8A7B85;
+}
+
+.lyka-history-head-actions { display: flex; align-items: center; gap: 4px; }
+
+.lyka-history-new,
+.lyka-history-close {
+  border: 1px solid #E5D3AC;
+  background: #FFFFFF;
+  color: #8A6E30;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.lyka-history-new:hover { background: #FBF3E3; border-color: #C5A869; }
+.lyka-history-close { padding: 5px 7px; color: #7A6B78; border-color: #E5DACB; }
+.lyka-history-close:hover { background: #F6EEE4; }
+
+.lyka-history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 8px 14px;
+  min-height: 0;
+}
+.lyka-history-list::-webkit-scrollbar { width: 7px; }
+.lyka-history-list::-webkit-scrollbar-track { background: transparent; }
+.lyka-history-list::-webkit-scrollbar-thumb { background: #E5DACB; border-radius: 8px; }
+
+.lyka-history-group { margin-top: 8px; }
+.lyka-history-group-label {
+  padding: 6px 8px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #A08D7A;
+}
+
+.lyka-history-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 8px 8px;
+  margin-bottom: 3px;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.lyka-history-row:hover { background: #FFFFFF; border-color: #EDE3D5; }
+.lyka-history-row:focus-visible { border-color: #C5A869; }
+.lyka-history-row.active {
+  background: #FFFFFF;
+  border-color: #E5D3AC;
+  box-shadow: 0 2px 8px rgba(197, 168, 105, 0.16);
+}
+
+.lyka-history-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 32% 28%, #F6DCE4 0%, #D89AAD 45%, #944D62 100%);
+  color: #FFFFFF;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.45);
+}
+
+.lyka-history-row-body { flex: 1; min-width: 0; }
+
+.lyka-history-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.lyka-history-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2A1426;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lyka-history-time {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: #8A7B85;
+}
+
+.lyka-history-preview {
+  margin-top: 1px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #7A6B78;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lyka-history-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 9.5px;
+  color: #A08D7A;
+}
+.lyka-history-pill {
+  background: #FBF3E3;
+  border: 1px solid #E5D3AC;
+  color: #8A6E30;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-weight: 700;
+}
+
+.lyka-history-rename {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: 1px solid #EDE3D5;
+  background: #FFFFFF;
+  color: #8A7B85;
+  border-radius: 6px;
+  padding: 3px 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.lyka-history-row:hover .lyka-history-rename,
+.lyka-history-row:focus-within .lyka-history-rename { opacity: 1; }
+.lyka-history-rename:hover { color: #8A6E30; border-color: #C5A869; }
+
+.lyka-history-edit { display: flex; align-items: center; gap: 3px; }
+.lyka-history-edit input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #C5A869;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: #2A1426;
+  background: #FFFFFF;
+  outline: none;
+}
+.lyka-history-icon-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #2E9E6B;
+  padding: 3px;
+  display: inline-flex;
+  border-radius: 4px;
+}
+.lyka-history-icon-btn:hover { background: #F1F7F3; }
+
+.lyka-history-more {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #EDE3D5;
+  background: #FFFFFF;
+  color: #8A6E30;
+  border-radius: 9px;
+  padding: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.lyka-history-more:hover { background: #FBF3E3; border-color: #C5A869; }
+.lyka-history-more:disabled { opacity: 0.65; cursor: default; }
+
+.lyka-history-loading,
+.lyka-history-empty,
+.lyka-history-error {
+  margin: 14px 8px;
+  padding: 14px;
+  border: 1px dashed #E5DACB;
+  border-radius: 11px;
+  background: #FFFFFF;
+  color: #7A6B78;
+  font-size: 11.5px;
+  text-align: center;
+}
+.lyka-history-loading { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.lyka-history-error { color: #9A2E3C; border-color: #E8CFD7; background: #FDF3F5; }
+.lyka-history-empty p { margin: 6px 0 2px; font-weight: 700; color: #2A1426; }
+.lyka-history-empty span { font-size: 10.5px; }
+.lyka-history-empty svg { color: #C5A869; }
+
+.lyka-history-spin { animation: lyka-history-rotate 0.9s linear infinite; }
+@keyframes lyka-history-rotate { to { transform: rotate(360deg); } }
+
+/* Mobile: off-canvas drawer over the chat pane. */
+@media (max-width: 960px) {
+  .lyka-history-backdrop {
+    display: block;
+    position: absolute;
+    inset: 0;
+    background: rgba(42, 20, 38, 0.35);
+    z-index: 55;
+  }
+  .lyka-history {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(86%, 320px);
+    z-index: 60;
+    box-shadow: 12px 0 30px rgba(42, 20, 38, 0.22);
+  }
+}

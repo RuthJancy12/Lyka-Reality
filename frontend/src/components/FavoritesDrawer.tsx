@@ -29,6 +29,7 @@ export function FavoritesDrawer({
       justifyContent: 'flex-end'
     }}>
       <div
+        className="favorites-drawer"
         style={{
           width: '100%',
           maxWidth: '440px',
@@ -119,7 +120,7 @@ export function FavoritesDrawer({
                 />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--plum-deep)' }}>
-                    AED {prop.price_aed.toLocaleString()}
+                    AED {prop.price_aed.toLocaleString('en-US')}
                   </div>
                   <div style={{
                     fontSize: '13px',

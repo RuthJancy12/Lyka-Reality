@@ -37,7 +37,7 @@ export function DubaiInvestment({ onExploreInvestment }: DubaiInvestmentProps) {
       <div className="container">
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
           gap: '50px',
           alignItems: 'center'
         }}>
@@ -53,6 +53,10 @@ export function DubaiInvestment({ onExploreInvestment }: DubaiInvestmentProps) {
               <img
                 src="https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1200&q=80"
                 alt="Dubai Marina Investment Skyline"
+                loading="lazy"
+                decoding="async"
+                width="600"
+                height="520"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>

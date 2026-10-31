@@ -1,5 +1,10 @@
+import { RoleMyAccountModal } from './RoleMyAccountModal'
+import { NotificationCenter } from './NotificationCenter'
 import { useState } from 'react'
-import { Heart, User, Menu, X, Phone, LogOut, ChevronDown, Sparkles } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Heart, User, Menu, X, Phone, LogOut, ChevronDown, Sparkles, LayoutDashboard, CircleUserRound } from 'lucide-react'
+import { useStaffRole } from '../crm/services/staffApi'
+
 
 interface NavbarProps {
   favoritesCount: number
@@ -20,8 +25,13 @@ export function Navbar({
   onLogout,
   onBookCallClick
 }: NavbarProps) {
+  const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
+  const [accountModalOpen, setAccountModalOpen] = useState(false)
+  const [accountModalTab, setAccountModalTab] = useState('profile')
+  const { role: staffRole } = useStaffRole()
+  const isStaff = staffRole !== null && ['admin', 'manager', 'hrms_admin', 'sales_agent', 'salesperson'].includes(staffRole)
 
   const scrollTo = (id: string) => {
     const el = document.getElementById(id)
@@ -46,6 +56,11 @@ export function Navbar({
           <img
             src="/logo.png"
             alt="Lyka Realty"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            width="140"
+            height="42"
             style={{
               height: '42px',
               width: 'auto',
@@ -108,8 +123,10 @@ export function Navbar({
         </nav>
 
         {/* Right Actions: Favorites, User Profile, and Gold "Book a Call" CTA */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          {/* Favorites Button */}
+        <div className="navbar-actions" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+
+          {/* Favorites Button (Restricted: Customers Only, Hidden for Staff) */}
+          {!isStaff && (
           <button
             onClick={onOpenFavorites}
             style={{
@@ -148,6 +165,9 @@ export function Navbar({
               </span>
             )}
           </button>
+          )}
+
+                    {currentUser && <NotificationCenter theme="dark" />}
 
           {/* User Profile */}
           <div style={{ position: 'relative' }}>
@@ -183,6 +203,15 @@ export function Navbar({
                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--champagne-light)' }}>
                   {currentUser.name}
                 </span>
+                {staffRole === 'admin' ? (
+                  <span style={{ fontSize: '10px', background: 'rgba(198, 161, 91, 0.3)', color: 'var(--gold-soft, #E2C98D)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>ADMIN</span>
+                ) : staffRole === 'hrms_admin' ? (
+                  <span style={{ fontSize: '10px', background: 'rgba(198, 161, 91, 0.3)', color: 'var(--gold-soft, #E2C98D)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>HRMS</span>
+                ) : staffRole === 'sales_agent' || staffRole === 'salesperson' ? (
+                  <span style={{ fontSize: '10px', background: 'rgba(198, 161, 91, 0.3)', color: 'var(--gold-soft, #E2C98D)', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>AGENT</span>
+                ) : (
+                  <span style={{ fontSize: '10px', background: 'rgba(255, 255, 255, 0.15)', color: 'var(--champagne-light, #FAF7F0)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>CLIENT</span>
+                )}
                 <ChevronDown size={14} color="var(--gold-hover)" />
               </button>
             ) : (
@@ -228,30 +257,117 @@ export function Navbar({
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--plum-main)' }}>{currentUser.name}</div>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{currentUser.email}</div>
                 </div>
-                <button
-                  onClick={() => {
-                    onOpenFavorites()
-                    setUserDropdownOpen(false)
-                  }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px 10px',
-                    borderRadius: '4px',
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '13px',
-                    color: 'var(--text-main)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer'
-                  }}
-                  onMouseOver={(e) => (e.currentTarget.style.background = 'var(--champagne-surface)')}
-                  onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
-                >
-                  <Heart size={14} color="var(--gold-dark)" /> Saved Properties ({favoritesCount})
-                </button>
+                {!isStaff ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        onOpenFavorites()
+                        setUserDropdownOpen(false)
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 10px',
+                        borderRadius: '4px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: 'var(--text-main)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.background = 'var(--champagne-surface)')}
+                      onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
+                    >
+                      <Heart size={14} color="var(--gold-dark)" /> Saved Properties ({favoritesCount})
+                    </button>
+                    <Link
+                      to="/account"
+                      onClick={() => setUserDropdownOpen(false)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 10px',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        color: 'var(--text-main)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer',
+                        textDecoration: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.background = 'var(--champagne-surface)')}
+                      onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
+                    >
+                      <CircleUserRound size={14} color="var(--gold-dark)" /> My Account
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setAccountModalTab('profile')
+                        setAccountModalOpen(true)
+                        setUserDropdownOpen(false)
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 10px',
+                        borderRadius: '4px',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '13px',
+                        color: 'var(--text-main)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'pointer'
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.background = 'var(--champagne-surface)')}
+                      onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
+                    >
+                      <CircleUserRound size={14} color="var(--gold-dark)" /> My Account
+                    </button>
+                  </>
+                )}
+                {isStaff && (
+                  <Link
+                    to="/crm"
+                    onClick={(e) => {
+                      if (staffRole === 'hrms_admin') {
+                        e.preventDefault()
+                        navigate('/crm/hrms')
+                      } else if (staffRole === 'sales_agent' || staffRole === 'salesperson') {
+                        e.preventDefault()
+                        navigate('/crm/my')
+                      }
+                      setUserDropdownOpen(false)
+                    }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '8px 10px',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      color: 'var(--text-main)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: 'pointer',
+                      textDecoration: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = 'var(--champagne-surface)')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'none')}
+                  >
+                    <LayoutDashboard size={14} color="var(--gold-dark)" /> My Dashboard (Staff CRM)
+                  </Link>
+                )}
                 <button
                   onClick={() => {
                     onLogout()
@@ -280,11 +396,12 @@ export function Navbar({
             )}
           </div>
 
-          {/* AI Property Assistant CTA */}
-          <button
-            type="button"
-            id="navbar-ai-assistant-btn"
-            onClick={onOpenAgent}
+          {/* AI Property Assistant CTA (Customers Only) */}
+          {!isStaff && (
+            <button
+              type="button"
+              id="navbar-ai-assistant-btn"
+              onClick={onOpenAgent}
             style={{
               background: 'rgba(197, 168, 105, 0.12)',
               border: '1px solid var(--gold-border)',
@@ -307,14 +424,15 @@ export function Navbar({
             }}
           >
             <Sparkles size={14} color="var(--gold-primary)" />
-            <span>AI Assistant</span>
+            <span className="navbar-ai-label">AI Assistant</span>
           </button>
+          )}
 
           {/* ELEGANT CTA BUTTON: "Book a Call" (Radiant Gold Accent) */}
           <button
             type="button"
             onClick={onBookCallClick}
-            className="gold-btn"
+            className="gold-btn navbar-book-btn"
             style={{ padding: '9px 20px', fontSize: '13px' }}
           >
             <Phone size={14} />
@@ -389,6 +507,13 @@ export function Navbar({
           </button>
         </div>
       )}
+          <RoleMyAccountModal
+        isOpen={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        initialTab={accountModalTab}
+        favoritesCount={favoritesCount}
+        onOpenFavorites={onOpenFavorites}
+      />
     </header>
   )
 }

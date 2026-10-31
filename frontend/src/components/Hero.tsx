@@ -94,7 +94,7 @@ export function Hero({ filters, onFilterChange, onSearchSubmit }: HeroProps) {
         </p>
 
         {/* Modern Property Search Component */}
-        <div style={{
+        <div className="hero-search-card" style={{
           maxWidth: '1040px',
           margin: '0 auto',
           background: '#FFFFFF',
@@ -129,7 +129,7 @@ export function Hero({ filters, onFilterChange, onSearchSubmit }: HeroProps) {
           </div>
 
           {/* Search Form Fields: Location | Property Type | Budget | Action */}
-          <form onSubmit={handleSubmit} style={{
+          <form onSubmit={handleSubmit} className="hero-search-form" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr)) 180px',
             gap: '14px',

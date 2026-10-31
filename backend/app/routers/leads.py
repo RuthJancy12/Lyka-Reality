@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -15,7 +15,7 @@ from app.models import Assignment, Lead, Recommendation, Activity, CRMProperty
 from app.schemas import (
     AnalyseRequest, AnalyseResponse, ExtractedRequirements, ScoreBreakdown,
     LeadCreate, LeadOut, LeadListOut, LeadListResponse,
-    LeadUpdate, LeadStatusUpdate, PublicEnquiryCreate,
+    LeadUpdate, LeadStatusUpdate, PublicEnquiryCreate, PublicEnquiryOut,
     DashboardStats, ActivityOut,
     RecommendationOut, PropertyOut,
 )
@@ -23,8 +23,13 @@ from app.services.lead_service import (
     extract_requirements, calculate_score,
     match_properties, save_recommendations, log_activity
 )
+from app.services.audit_service import log_audit
+from app.services import notification_service
 from app.services.lead_source import channel_predicate, validate_channel
 from app.services.roles import assert_lead_access, require_staff, team_lead_ids
+from app.services.property_analytics import (
+    ad_exists, infer_property_ref, sync_lead_conversion_events,
+)
 
 logger = logging.getLogger("lyka.leads")
 
@@ -77,10 +82,14 @@ def analyze_enquiry(
     if "contact_email" in missing and "contact_phone" in missing:
         suggestions.append("Obtain at least one contact method.")
 
+    recommended_action = suggestions[0] if suggestions else "Schedule initial consultation and share matched properties."
+    score["recommended_next_action"] = recommended_action
+
     return AnalyseResponse(
         requirements=ExtractedRequirements(**req),
         score=ScoreBreakdown(**score),
         suggestions=suggestions,
+        recommended_next_action=recommended_action,
     )
 
 
@@ -106,6 +115,16 @@ def create_lead(
                 detail=f"A lead from {payload.contact_email} was already submitted in the last 24 hours (id={existing.id})."
             )
 
+    computed_band = "Hot" if (payload.priority_score >= 70 or payload.priority_label == "High") else (
+        "Warm" if (payload.priority_score >= 40 or payload.priority_label == "Medium") else "Cold"
+    )
+    if isinstance(payload.score_breakdown, dict) and payload.score_breakdown.get("band"):
+        computed_band = str(payload.score_breakdown["band"])
+
+    reasons = []
+    if isinstance(payload.score_breakdown, dict) and payload.score_breakdown.get("reasoning"):
+        reasons = payload.score_breakdown["reasoning"]
+
     lead = Lead(
         raw_enquiry_text=payload.raw_enquiry_text,
         customer_name=payload.customer_name,
@@ -124,11 +143,20 @@ def create_lead(
         priority_score=payload.priority_score,
         priority_label=payload.priority_label,
         score_breakdown=payload.score_breakdown,
+        lead_score=payload.priority_score,
+        lead_score_band=computed_band,
+        lead_score_reasons=reasons,
+        lead_score_source="computed",
+        lead_score_updated_at=datetime.now(timezone.utc),
         status="new",
     )
+    inferred_ref = infer_property_ref(payload.raw_enquiry_text)
+    if inferred_ref and ad_exists(db, inferred_ref):
+        lead.property_ref = inferred_ref
     db.add(lead)
     db.commit()
     db.refresh(lead)
+    sync_lead_conversion_events(db, lead)
 
     # If we have enough info, run matching immediately
     if lead.lead_type or lead.location:
@@ -138,6 +166,22 @@ def create_lead(
 
     log_activity(lead.id, "enquiry_received", "Lead created from customer enquiry.", db)
     log_activity(lead.id, "ai_analysed", f"Priority: {lead.priority_label} ({lead.priority_score}/100)", db)
+    log_audit(db, ctx, "lead_created", "lead", lead.id, lead_id=lead.id,
+              details={"source": "staff", "status": lead.status})
+
+    try:
+        notification_service.notify_admins(
+            db,
+            title="New Lead Created",
+            message=f"Lead #{lead.id} created for {lead.customer_name} ({lead.location or 'General'}).",
+            category="system",
+            notification_type="lead_created",
+            related_entity_type="lead",
+            related_entity_id=lead.id,
+            action_url=f"/crm/leads?id={lead.id}",
+        )
+    except Exception as exc:
+        logger.warning("Failed to dispatch admin notification for lead %s: %s", lead.id, exc)
 
     db.refresh(lead)
     return _load_lead(lead.id, db)
@@ -145,7 +189,7 @@ def create_lead(
 
 # ─── POST /api/leads/public (anonymous website enquiry) ─────────────────────
 
-@router.post("/public", response_model=LeadOut, status_code=201, summary="Public website enquiry (no auth)")
+@router.post("/public", response_model=PublicEnquiryOut, status_code=201, summary="Public website enquiry (no auth)")
 def create_public_enquiry(
     payload: PublicEnquiryCreate,
     db: Session = Depends(get_db),
@@ -178,7 +222,7 @@ def create_public_enquiry(
     if dup:
         raise HTTPException(
             status_code=409,
-            detail=f"A lead from {payload.contact_email} was already submitted in the last 24 hours (id={dup.id})."
+            detail="This enquiry was already received recently."
         )
 
     parts = [
@@ -204,11 +248,18 @@ def create_public_enquiry(
         parts.append(f"Message: {payload.message.strip()}")
     raw_text = ". ".join(parts) + "."
 
+    linked_ref = (payload.property_ref or "").strip() or None
+    if linked_ref and not ad_exists(db, linked_ref):
+        # Preserve the existing enquiry behaviour for legacy/unknown refs but
+        # never attach analytics to a listing that is not in the real registry.
+        linked_ref = None
+
     lead = Lead(
         raw_enquiry_text=raw_text,
         customer_name=payload.customer_name.strip(),
         contact_email=payload.contact_email,
         contact_phone=(payload.contact_phone.strip() if payload.contact_phone else None),
+        property_ref=linked_ref,
         lead_type=payload.lead_type,
         property_type=payload.property_type,
         location=payload.location,
@@ -252,6 +303,7 @@ def create_public_enquiry(
     db.add(lead)
     db.commit()
     db.refresh(lead)
+    sync_lead_conversion_events(db, lead)
 
     if lead.lead_type or lead.location:
         matches = match_properties(lead, db)
@@ -260,9 +312,38 @@ def create_public_enquiry(
 
     log_activity(lead.id, "enquiry_received", "Lead created from public website enquiry.", db)
     log_activity(lead.id, "ai_analysed", f"Priority: {lead.priority_label} ({lead.priority_score}/100)", db)
+    log_audit(db, {"email": None, "role": "public", "uid": None},
+              "enquiry_created", "lead", lead.id, lead_id=lead.id,
+              details={"source": "public_site", "status": lead.status})
+
+    try:
+        notification_service.notify_admins(
+            db,
+            title="New Customer Enquiry",
+            message=f"Enquiry from {lead.customer_name} ({lead.contact_email}) for {lead.location or 'Dubai properties'}.",
+            category="inquiries",
+            notification_type="enquiry_created",
+            related_entity_type="lead",
+            related_entity_id=lead.id,
+            action_url=f"/crm/leads?id={lead.id}",
+        )
+        if lead.contact_email:
+            notification_service.create_notification(
+                db,
+                recipient_email=lead.contact_email,
+                title="Enquiry Received",
+                message=f"Thank you for contacting LYKA Realty. Our team will review your inquiry shortly.",
+                category="inquiries",
+                notification_type="enquiry_received",
+                related_entity_type="lead",
+                related_entity_id=lead.id,
+                action_url="/account",
+            )
+    except Exception as exc:
+        logger.warning("Failed to dispatch notification for enquiry %s: %s", lead.id, exc)
 
     db.refresh(lead)
-    return _load_lead(lead.id, db)
+    return PublicEnquiryOut(id=lead.id, status="received")
 
 
 # ─── GET /api/leads ───────────────────────────────────────────────────────────
@@ -283,50 +364,90 @@ def list_leads(
 
     # Data isolation: salespeople list only leads assigned to them,
     # sales managers only leads assigned to their team.
-    if ctx["role"] == "salesperson":
+    if ctx["role"] in ("salesperson", "sales_agent"):
+        caller_email = (ctx["email"] or "").lower()
         own_ids = [
             a.lead_id for a in
-            db.query(Assignment).filter(Assignment.staff_email == (ctx["email"] or "")).filter(
+            db.query(Assignment).filter(func.lower(Assignment.staff_email) == caller_email).filter(
                 Assignment.status != "closed").all()
         ]
-        q = q.filter(Lead.id.in_(own_ids or [-1]))
+        q = q.filter(
+            or_(
+                Lead.id.in_(own_ids or [-1]),
+                func.lower(Lead.covering_agent_email) == caller_email,
+                func.lower(Lead.current_responsible_email) == caller_email,
+            )
+        )
+    elif ctx["role"] == "hrms_admin":
+        q = q.filter(Lead.id == -1)
     elif ctx["role"] == "sales_manager":
         q = q.filter(Lead.id.in_(team_lead_ids(db, ctx) or [-1]))
 
-    if search:
-        like = f"%{search}%"
+    if search and search.strip():
+        s = search.strip()
+        like = f"%{s}%"
+        search_filters = [
+            Lead.customer_name.ilike(like),
+            Lead.contact_email.ilike(like),
+            Lead.contact_phone.ilike(like),
+            Lead.location.ilike(like),
+            Lead.property_ref.ilike(like),
+            Lead.property_type.ilike(like),
+        ]
+        words = s.split()
+        if len(words) > 1:
+            for w in words:
+                w_like = f"%{w}%"
+                search_filters.append(Lead.customer_name.ilike(w_like))
+                search_filters.append(Lead.contact_email.ilike(w_like))
+        q = q.filter(or_(*search_filters))
+
+    if status and status.strip():
+        q = q.filter(Lead.status == status.strip().lower())
+
+    if priority and priority.strip():
+        p = priority.strip()
         q = q.filter(
-            Lead.customer_name.ilike(like) |
-            Lead.contact_email.ilike(like) |
-            Lead.location.ilike(like)
+            or_(
+                Lead.priority_label.ilike(p),
+                Lead.lead_score_band.ilike(p),
+            )
         )
-    if status:
-        q = q.filter(Lead.status == status)
-    if priority:
-        q = q.filter(Lead.priority_label == priority)
-    if lead_type:
-        q = q.filter(Lead.lead_type == lead_type)
-    if channel:
+
+    if lead_type and lead_type.strip():
+        lt = lead_type.strip().lower()
+        q = q.filter(
+            or_(
+                Lead.lead_type.ilike(lt),
+                Lead.purpose.ilike(lt),
+            )
+        )
+
+    if channel and channel.strip():
         try:
-            validate_channel(channel)
+            validate_channel(channel.strip())
         except ValueError as e:
             raise HTTPException(status_code=422, detail=str(e))
-        q = q.filter(channel_predicate(Lead, channel))
+        q = q.filter(channel_predicate(Lead, channel.strip()))
 
-    total = q.count()
-    leads = (
-        q.order_by(Lead.created_at.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
-        .all()
-    )
-
-    return LeadListResponse(
-        total=total,
-        page=page,
-        per_page=per_page,
-        leads=[LeadListOut.model_validate(l) for l in leads],
-    )
+    try:
+        total = q.count()
+        leads = (
+            q.order_by(Lead.created_at.desc())
+            .offset((page - 1) * per_page)
+            .limit(per_page)
+            .all()
+        )
+        serialized_leads = [LeadListOut.model_validate(l) for l in leads]
+        return LeadListResponse(
+            total=total,
+            page=page,
+            per_page=per_page,
+            leads=serialized_leads,
+        )
+    except Exception as e:
+        logger.exception("GET /api/leads error role=%s error=%s", ctx.get("role"), e)
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve leads: {str(e)}")
 
 
 # ─── GET /api/leads/:id ───────────────────────────────────────────────────────
@@ -373,6 +494,9 @@ def update_lead(
 
     db.commit()
     log_activity(lead_id, "note_added", f"Lead details updated by agent.", db)
+    changed = sorted(payload.model_dump(exclude_unset=True).keys())
+    log_audit(db, ctx, "lead_updated", "lead", lead_id, lead_id=lead_id,
+              details={"fields": changed})
     return _load_lead(lead_id, db)
 
 
@@ -393,11 +517,40 @@ def update_status(
     old_status = lead.status
     lead.status = payload.status
     db.commit()
+    # A closed lead is a successful booking; reopening/losing it removes the
+    # booking event so the funnel never keeps a stale conversion.
+    sync_lead_conversion_events(db, lead)
     log_activity(
         lead_id, "status_changed",
         f"Status changed: {old_status} → {payload.status}. {payload.notes or ''}",
         db
     )
+    log_audit(db, ctx, "lead_status_changed", "lead", lead_id, lead_id=lead_id,
+              details={"from": old_status, "to": payload.status,
+                       "note": (payload.notes or "")[:300]})
+
+    if old_status != payload.status:
+        try:
+            assignment = (
+                db.query(Assignment)
+                .filter(Assignment.lead_id == lead_id, Assignment.status != "closed")
+                .first()
+            )
+            if assignment and assignment.staff_email:
+                notification_service.create_notification(
+                    db,
+                    recipient_email=assignment.staff_email,
+                    recipient_user_id=assignment.staff_uid,
+                    title="Lead Status Updated",
+                    message=f"Lead #{lead_id} ({lead.customer_name}) status changed from {old_status} to {payload.status}.",
+                    category="system",
+                    notification_type="lead_status_changed",
+                    related_entity_type="lead",
+                    related_entity_id=lead_id,
+                    action_url=f"/crm/leads?id={lead_id}",
+                )
+        except Exception as exc:
+            logger.warning("Failed to notify on status update: %s", exc)
     return _load_lead(lead_id, db)
 
 
@@ -435,6 +588,8 @@ def refresh_recommendations(
         log_activity(lead_id, "recommendation_sent",
                      "No matching properties found with current criteria.", db)
 
+    log_audit(db, ctx, "recommendations_refreshed", "lead", lead_id, lead_id=lead_id,
+              details={"matched": len(matches)})
     return _load_lead(lead_id, db)
 
 

@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { CheckCircle2, Phone, Mail, MapPin, ShieldCheck, ArrowRight } from 'lucide-react'
+import { CheckCircle2, Phone, Mail, MapPin, ShieldCheck, ArrowRight, AlertCircle } from 'lucide-react'
+import { submitPublicEnquiry } from '../services/api'
+import { collectLeadSource, normalizeDiscoverySource } from '../utils/leadSource'
+import { DiscoverySourceSelect } from './DiscoverySourceSelect'
 
 export function ContactConsultation() {
   const [formData, setFormData] = useState({
@@ -7,17 +10,42 @@ export function ContactConsultation() {
     phone: '',
     email: '',
     requirement: 'Buy Luxury Property',
-    message: ''
+    message: '',
+    discoverySource: '',
   })
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => {
-      setSubmitted(false)
-      setFormData({ name: '', phone: '', email: '', requirement: 'Buy Luxury Property', message: '' })
-    }, 4500)
+    if (submitting) return
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      const requirement = formData.requirement
+      const isRent = /rental|rent/i.test(requirement)
+      const isSell = /sell/i.test(requirement)
+      await submitPublicEnquiry({
+        customer_name: formData.name.trim(),
+        contact_email: formData.email.trim(),
+        contact_phone: formData.phone.trim() || undefined,
+        message: `Requirement: ${requirement}${formData.message.trim() ? ` — ${formData.message.trim()}` : ''}`,
+        lead_type: isSell ? undefined : isRent ? 'renter' : 'buyer',
+        discovery_source: normalizeDiscoverySource(formData.discoverySource),
+        ...collectLeadSource(),
+      })
+      // Success is shown ONLY after the backend confirms the save (HTTP 201).
+      setSubmitted(true)
+      setTimeout(() => {
+        setSubmitted(false)
+        setFormData({ name: '', phone: '', email: '', requirement: 'Buy Luxury Property', message: '', discoverySource: '' })
+      }, 4500)
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to send enquiry. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -27,7 +55,7 @@ export function ContactConsultation() {
       padding: '90px 0'
     }}>
       <div className="container">
-        <div style={{
+        <div className="contact-card" style={{
           maxWidth: '1080px',
           margin: '0 auto',
           background: 'var(--champagne-surface)',
@@ -36,9 +64,9 @@ export function ContactConsultation() {
           padding: '48px',
           boxShadow: '0 10px 30px rgba(26, 13, 24, 0.05)'
         }}>
-          <div style={{
+          <div className="contact-grid" style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '48px',
             alignItems: 'start'
           }}>
@@ -155,7 +183,7 @@ export function ContactConsultation() {
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="contact-duo" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '5px' }}>
                         Phone / WhatsApp *
@@ -252,19 +280,44 @@ export function ContactConsultation() {
                     />
                   </div>
 
+                  <DiscoverySourceSelect
+                    id="lyka-contact-discovery-source"
+                    value={formData.discoverySource}
+                    onChange={(v) => setFormData({ ...formData, discoverySource: v })}
+                    variant="form"
+                  />
+
                   {/* Button: "Book a Consultation" (Gold Luxury CTA) */}
+                  {submitError && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      padding: '10px 12px',
+                      background: '#FEF2F2',
+                      border: '1px solid #FECACA',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      color: '#991B1B'
+                    }} role="alert">
+                      <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
                   <button
                     type="submit"
+                    disabled={submitting}
                     className="gold-btn"
                     style={{
                       width: '100%',
                       padding: '12px',
                       fontSize: '14px',
                       borderRadius: '4px',
-                      marginTop: '4px'
+                      marginTop: '4px',
+                      opacity: submitting ? 0.6 : 1
                     }}
                   >
-                    <span>Book a Consultation</span>
+                    <span>{submitting ? 'Sending…' : 'Book a Consultation'}</span>
                     <ArrowRight size={15} />
                   </button>
                 </form>

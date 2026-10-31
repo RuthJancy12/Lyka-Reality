@@ -22,7 +22,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import STAFF_ROLES, StaffUser
+from app.models import STAFF_ROLES, ACTIVE_STAFF_ROLES, StaffUser
+from app.services import security_monitor
 from app.services.firebase_auth import verify_bearer_token
 
 CUSTOMER = "customer"
@@ -76,9 +77,11 @@ def resolve_role(db: Session, claims: Optional[Dict[str, Any]]) -> Tuple[str, Op
             return dupes[0].role, email, uid
     staff = find_staff(db, None, email)
     if staff and staff.role in STAFF_ROLES:
-        if uid and not staff.firebase_uid:
-            staff.firebase_uid = uid
-            db.commit()
+        if uid and staff.firebase_uid != uid:
+            other = db.query(StaffUser).filter(StaffUser.firebase_uid == uid, StaffUser.id != staff.id).first()
+            if not other:
+                staff.firebase_uid = uid
+                db.commit()
         return staff.role, email, uid
     return CUSTOMER, email, uid
 
@@ -109,12 +112,22 @@ def require_roles(*allowed: str):
     ) -> Dict[str, Any]:
         claims = verify_bearer_token(authorization)
         if not claims:
+            # Security event: unauthenticated staff API call.
+            try:
+                security_monitor.record_auth_failure(db, subject="staff", path="/api/auth", method="bearer")
+            except Exception:
+                pass
             raise HTTPException(
                 status_code=401,
                 detail="Staff sign-in required (valid Firebase ID token).",
             )
         role, email, uid = resolve_role(db, claims)
         if role not in allowed:
+            # Security event: authenticated caller lacking the required role.
+            try:
+                security_monitor.record_role_violation(db, subject=str(email or uid or "staff"), role_attempted=role, path="/api/auth", method="bearer")
+            except Exception:
+                pass
             raise HTTPException(status_code=403, detail="Insufficient role.")
         return {"role": role, "email": email, "uid": uid}
 
@@ -124,11 +137,13 @@ def require_roles(*allowed: str):
 require_staff = require_roles(*STAFF_ROLES)
 require_manager_plus = require_roles("admin", "manager", "sales_manager")
 require_admin = require_roles("admin")
+require_hrms_admin = require_roles("admin", "hrms_admin")
+require_sales_agent = require_roles("admin", "sales_agent", "salesperson")
 
 
 def scoped_assignee_filter(role: str, email: Optional[str]):
-    """Salespeople only see their own assignments; managers and admin see all."""
-    if role == "salesperson":
+    """Salespeople/agents only see their own assignments; managers and admin see all."""
+    if role in ("salesperson", "sales_agent"):
         from app.models import Assignment
 
         return [Assignment.staff_email == (email or "")]
@@ -144,6 +159,34 @@ def _identity_match(model: Any, ctx: Dict[str, Any]):
     if uid:
         return or_(model.staff_uid == uid, model.staff_email == email)
     return model.staff_email == email
+
+
+def is_org_wide_sales_manager(db: Session, ctx: Dict[str, Any]) -> bool:
+    """True if caller is a sales manager overseeing the entire sales organization.
+    
+    When a single sales manager manages all active sales personnel or is the only
+    sales manager in the organization, they have company-wide sales oversight.
+    When multiple disjoint sales managers exist, each remains scoped to their team.
+    """
+    if ctx.get("role") != "sales_manager":
+        return False
+    me = (ctx.get("email") or "").lower()
+    other_sms = (
+        db.query(StaffUser)
+        .filter(StaffUser.role == "sales_manager", StaffUser.is_active == True)  # noqa: E712
+        .filter(func.lower(StaffUser.email) != me)
+        .count()
+    )
+    if other_sms > 0:
+        return False
+    other_managed = (
+        db.query(StaffUser)
+        .filter(StaffUser.role == "salesperson", StaffUser.is_active == True)  # noqa: E712
+        .filter(StaffUser.manager_email.isnot(None))
+        .filter(func.lower(StaffUser.manager_email) != me)
+        .count()
+    )
+    return other_managed == 0
 
 
 def team_scope_emails(db: Session, ctx: Dict[str, Any]) -> Optional[List[str]]:
@@ -195,7 +238,10 @@ def assert_lead_access(db: Session, ctx: Dict[str, Any], lead_id: int) -> None:
     role = ctx.get("role")
     if role in ("admin", "manager"):
         return
-    if role == "salesperson":
+    if role == "hrms_admin":
+        _record_ownership_violation(db, ctx, lead_id)
+        raise HTTPException(status_code=403, detail="HRMS Admin does not have CRM lead access.")
+    if role in ("salesperson", "sales_agent"):
         own = (
             db.query(Assignment)
             .filter(Assignment.lead_id == lead_id)
@@ -204,11 +250,36 @@ def assert_lead_access(db: Session, ctx: Dict[str, Any], lead_id: int) -> None:
             .first()
         )
         if not own:
-            raise HTTPException(status_code=403, detail="Lead is not assigned to you.")
+            from app.models import Lead
+            c_email = (ctx.get("email") or "").lower()
+            is_cov = db.query(Lead).filter(
+                Lead.id == lead_id,
+                func.lower(Lead.covering_agent_email) == c_email
+            ).first()
+            if not is_cov:
+                _record_ownership_violation(db, ctx, lead_id)
+                raise HTTPException(status_code=403, detail="Lead is not assigned to you.")
         return
     if role == "sales_manager":
+        if is_org_wide_sales_manager(db, ctx):
+            return
         ids = team_lead_ids(db, ctx) or []
         if lead_id not in ids:
+            _record_ownership_violation(db, ctx, lead_id)
             raise HTTPException(status_code=403, detail="Lead is outside your team.")
         return
+    _record_ownership_violation(db, ctx, lead_id)
     raise HTTPException(status_code=403, detail="Insufficient role.")
+
+
+def _record_ownership_violation(db: Session, ctx: Dict[str, Any], lead_id: int) -> None:
+    """Security event: cross-user record access attempt (best-effort logging)."""
+    try:
+        security_monitor.record_ownership_violation(
+            db,
+            subject=str(ctx.get("email") or ctx.get("uid") or "staff"),
+            lead_id=lead_id,
+        )
+    except Exception:
+        # Security logging must never break authorization decisions.
+        pass

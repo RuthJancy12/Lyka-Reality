@@ -5,4 +5,5 @@ httpx
 python-dotenv
 firebase-admin
 sqlalchemy
+psycopg2-binary
 email-validator

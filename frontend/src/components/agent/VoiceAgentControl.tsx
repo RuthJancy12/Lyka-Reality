@@ -352,13 +352,13 @@ export function VoiceAgentControl({ status = 'ready', onOpenAgent }: VoiceAgentC
                 status === 'thinking'
                   ? 'var(--gold-primary, #C5A059)'
                   : status === 'listening'
-                  ? '#3B82F6'
+                  ? '#C6A15B'
                   : '#10B981',
               boxShadow:
                 status === 'thinking'
                   ? '0 0 8px rgba(197, 168, 105, 0.8)'
                   : status === 'listening'
-                  ? '0 0 8px #3B82F6'
+                  ? '0 0 8px #C6A15B'
                   : '0 0 8px #10B981',
             }}
           />

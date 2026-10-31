@@ -20,8 +20,13 @@ from app.models import CRMProperty, Lead, Recommendation, Activity
 load_dotenv()
 logger = logging.getLogger("lyka.lead_service")
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "").strip()
+OLLAMA_BASE_URL = os.getenv(
+    "OLLAMA_BASE_URL",
+    "https://ollama.com" if OLLAMA_API_KEY else "http://localhost:11434",
+)
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+OLLAMA_HEADERS = {"Authorization": f"Bearer {OLLAMA_API_KEY}"} if OLLAMA_API_KEY else {}
 
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _PHONE_RE = re.compile(r"\+?\d[\d\s\-()]{7,}\d")
@@ -31,7 +36,7 @@ def _ollama_health() -> Dict[str, Any]:
     """Lightweight Ollama probe so failures produce a clear message."""
     try:
         with httpx.Client(timeout=5.0) as client:
-            r = client.get(f"{OLLAMA_BASE_URL}/api/tags")
+            r = client.get(f"{OLLAMA_BASE_URL}/api/tags", headers=OLLAMA_HEADERS)
             if r.status_code != 200:
                 return {"status": "error", "detail": f"HTTP {r.status_code}"}
             names = [m.get("name", "") for m in r.json().get("models", [])]
@@ -143,6 +148,7 @@ def extract_requirements(enquiry_text: str) -> Dict[str, Any]:
         with httpx.Client(timeout=60.0) as client:
             res = client.post(
                 f"{OLLAMA_BASE_URL}/api/generate",
+                headers=OLLAMA_HEADERS,
                 json={
                     "model": OLLAMA_MODEL,
                     "prompt": prompt,
@@ -291,16 +297,33 @@ def calculate_score(req: Dict[str, Any]) -> Dict[str, Any]:
 
     if total >= 70:
         label = "High"
+        band = "Hot"
     elif total >= 40:
         label = "Medium"
+        band = "Warm"
     else:
         label = "Low"
+        band = "Cold"
+
+    core_signals = ["budget_max", "budget_min", "location", "property_type", "bedrooms", "lead_type", "timeline_days"]
+    observed_signals = sum(1 for s in core_signals if req.get(s) is not None)
+    confidence = round(min(1.0, observed_signals / len(core_signals)), 2)
+
+    if band == "Hot":
+        recommended_action = "High priority: Contact immediately via phone to schedule private viewing."
+    elif band == "Warm":
+        recommended_action = "Follow up within 24 hours to confirm timeline and share matching units."
+    else:
+        recommended_action = "Send curated email portfolio and follow up on move-in timeframe."
 
     return {
         **breakdown,
         "total": total,
         "label": label,
+        "band": band,
+        "confidence": confidence,
         "reasoning": reasoning,
+        "recommended_next_action": recommended_action,
     }
 
 
@@ -388,12 +411,22 @@ def match_properties(lead: "Lead", db: Session, limit: int = 3) -> List[Dict[str
     elif lead.lead_type == "renter":
         query = query.filter(CRMProperty.listing_type == "Rent")
 
-    pool = query.all()
-
+    from sqlalchemy import func, or_
     if lead.location:
-        exact = [p for p in pool if _location_matches(lead.location, p.location)]
+        loc_str = _normalize_location(lead.location)
+        tokens = [t.strip() for t in re.split(r"[,;/|]+", loc_str) if t.strip()]
+        loc_filters = []
+        for t in tokens:
+            alias = _LOCATION_ALIASES.get(t, t)
+            if len(alias) >= 3:
+                loc_filters.append(func.lower(CRMProperty.location).contains(alias))
+        if loc_filters:
+            exact_candidates = query.filter(or_(*loc_filters)).limit(100).all()
+        else:
+            exact_candidates = query.limit(100).all()
+        exact = [p for p in exact_candidates if _location_matches(lead.location, p.location)]
     else:
-        exact = list(pool)
+        exact = query.limit(100).all()
 
     scored_exact: List[Tuple[CRMProperty, float, str, List[str]]] = []
     for prop in exact:
@@ -423,8 +456,10 @@ def match_properties(lead: "Lead", db: Session, limit: int = 3) -> List[Dict[str
                         if _location_matches(n, p.location)]
                 return min(hits) if hits else None
 
+            nearby_filters = [func.lower(CRMProperty.location).contains(c.lower()) for c in nearby_order]
+            nearby_pool = query.filter(or_(*nearby_filters)).limit(50).all() if nearby_filters else []
             fill: List[Tuple[int, float, CRMProperty, float, str, List[str]]] = []
-            for prop in pool:
+            for prop in nearby_pool:
                 if prop.id in exact_ids:
                     continue
                 r = _nb_rank(prop)
