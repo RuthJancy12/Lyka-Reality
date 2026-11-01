@@ -6,4 +6,5 @@ python-dotenv
 firebase-admin
 sqlalchemy
 psycopg2-binary
+psycopg[binary]
 email-validator

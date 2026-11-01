@@ -78,6 +78,7 @@ DEFAULT_CORS_ORIGINS: List[str] = [
     "http://127.0.0.1:3000",
     "http://localhost:4173",
     "http://127.0.0.1:4173",
+    "https://lyka-realty.vercel.app",
     "https://ai-real-estate-lead-qualification-and.onrender.com",
     "https://ai-real-estate-lead-qualification-and-property-recom-i2g7sts7h.vercel.app",
     "https://ai-real-estate-lead-qualification-a.vercel.app",
