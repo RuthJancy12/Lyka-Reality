@@ -377,9 +377,11 @@ def _upsert_turn(
         .first()
     )
     created_at = payload.created_at or datetime.now(timezone.utc)
-    savepoint = db.begin_nested()
-    try:
-        if session is None:
+
+    # 1. Ensure session row exists (isolated savepoint to handle concurrent creation)
+    if session is None:
+        session_sp = db.begin_nested()
+        try:
             session = CustomerChatSession(
                 firebase_uid=uid,
                 session_id=sess_id,
@@ -388,36 +390,40 @@ def _upsert_turn(
                 updated_at=created_at,
             )
             db.add(session)
-        else:
-            if payload.role == "user" and (not session.title or session.title == "LYKA chat"):
-                session.title = (payload.text or "").strip()[:60]
-            if _as_utc(created_at) >= _as_utc(session.updated_at):
-                session.updated_at = created_at
+            db.flush()
+            session_sp.commit()
+        except IntegrityError:
+            session_sp.rollback()
+            session = (
+                db.query(CustomerChatSession)
+                .filter(CustomerChatSession.firebase_uid == uid)
+                .filter(CustomerChatSession.session_id == sess_id)
+                .first()
+            )
+    else:
+        if payload.role == "user" and (not session.title or session.title == "LYKA chat"):
+            session.title = (payload.text or "").strip()[:60]
+        if _as_utc(created_at) >= _as_utc(session.updated_at):
+            session.updated_at = created_at
 
-        row = CustomerChatMessage(
-            firebase_uid=uid,
-            session_id=sess_id,
-            message_ref=ref,
-            role=(payload.role or "user").strip()[:16],
-            text=(payload.text or "").strip()[:4000],
-            property_ids=_clean_property_ids(payload.property_ids),
-            created_at=created_at,
-        )
+    # 2. Insert message row with idempotency guard
+    row = CustomerChatMessage(
+        firebase_uid=uid,
+        session_id=sess_id,
+        message_ref=ref,
+        role=(payload.role or "user").strip()[:16],
+        text=(payload.text or "").strip()[:4000],
+        property_ids=_clean_property_ids(payload.property_ids),
+        created_at=created_at,
+    )
+    msg_sp = db.begin_nested()
+    try:
         db.add(row)
         db.flush()
-        savepoint.commit()
+        msg_sp.commit()
+        return row, True
     except IntegrityError:
-        # Idempotency guard: a repeated record_ref (or session) must return the
-        # existing turn instead of surfacing an unhandled IntegrityError, which
-        # would bubble up as an HTTP 500 "Internal server error. Please retry
-        # shortly." through the global FastAPI exception handler.
-        savepoint.rollback()
-        session = (
-            db.query(CustomerChatSession)
-            .filter(CustomerChatSession.firebase_uid == uid)
-            .filter(CustomerChatSession.session_id == sess_id)
-            .first()
-        ) or session
+        msg_sp.rollback()
         existing = (
             db.query(CustomerChatMessage)
             .filter(CustomerChatMessage.firebase_uid == uid)
@@ -427,7 +433,6 @@ def _upsert_turn(
         if existing is not None:
             return existing, False
         raise
-    return row, True
 
 
 def _interaction_out(row: CustomerInteraction) -> schemas.CustomerInteractionOut:
@@ -980,10 +985,27 @@ def create_my_chat_turn(
     db: Session = Depends(get_db),
 ):
     uid = str(claims["uid"])
-    row, _created = _upsert_turn(db, uid, payload)
-    db.commit()
-    db.refresh(row)
-    return _turn_out(row)
+    try:
+        row, _created = _upsert_turn(db, uid, payload)
+        db.commit()
+        db.refresh(row)
+        return _turn_out(row)
+    except Exception as exc:
+        db.rollback()
+        logger.warning("Error persisting chat turn for uid %s: %s", uid, exc)
+        ref = _new_ref(payload.record_ref, "msg")
+        existing = (
+            db.query(CustomerChatMessage)
+            .filter(CustomerChatMessage.firebase_uid == uid)
+            .filter(CustomerChatMessage.message_ref == ref)
+            .first()
+        )
+        if existing is not None:
+            return _turn_out(existing)
+        raise HTTPException(
+            status_code=500,
+            detail="Chat turn persistence error. Please retry."
+        )
 
 
 # ─── Consent-gated interactions ──────────────────────────────────────────────

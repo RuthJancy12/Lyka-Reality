@@ -197,9 +197,30 @@ export function newerDoc<T extends { updatedAt?: string; createdAt?: string }>(
 
 /* ---------------- cloud writes (fire-and-forget safe) ---------------- */
 
+/**
+ * Recursively removes properties with undefined values so Firebase Realtime
+ * Database set() and update() operations never reject with:
+ * "set argument contains undefined in property users...".
+ */
+export function stripUndefined<T>(val: T): T {
+  if (val === undefined || val === null || typeof val !== 'object') {
+    return val
+  }
+  if (Array.isArray(val)) {
+    return val.map((item) => stripUndefined(item)) as unknown as T
+  }
+  const clean: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(val)) {
+    if (v !== undefined) {
+      clean[k] = stripUndefined(v)
+    }
+  }
+  return clean as T
+}
+
 export async function cloudSaveProfile(uid: string, doc: UserDoc): Promise<boolean> {
   try {
-    await set(ref(db, `${userNode(uid)}/profile`), doc)
+    await set(ref(db, `${userNode(uid)}/profile`), stripUndefined(doc))
     return true
   } catch (err) {
     logDbError('saveProfile', err)
@@ -209,7 +230,7 @@ export async function cloudSaveProfile(uid: string, doc: UserDoc): Promise<boole
 
 export async function cloudSavePrefs(uid: string, doc: PreferencesDoc): Promise<boolean> {
   try {
-    await set(ref(db, `${userNode(uid)}/prefs`), doc)
+    await set(ref(db, `${userNode(uid)}/prefs`), stripUndefined(doc))
     return true
   } catch (err) {
     logDbError('savePrefs', err)
@@ -233,7 +254,7 @@ export async function cloudSaveFavoritesAll(uid: string, ids: string[]): Promise
 
 export async function cloudSaveInquiry(uid: string, doc: InquiryDoc): Promise<boolean> {
   try {
-    await set(ref(db, `${userNode(uid)}/inquiries/${doc._id}`), doc)
+    await set(ref(db, `${userNode(uid)}/inquiries/${doc._id}`), stripUndefined(doc))
     return true
   } catch (err) {
     logDbError('saveInquiry', err)
@@ -247,10 +268,10 @@ export async function cloudUpdateInquiry(
   patch: Partial<Pick<InquiryDoc, 'status' | 'updatedAt'>>
 ): Promise<boolean> {
   try {
-    await update(ref(db, `${userNode(uid)}/inquiries/${inquiryId}`), {
+    await update(ref(db, `${userNode(uid)}/inquiries/${inquiryId}`), stripUndefined({
       ...patch,
       updatedAt: nowIso()
-    })
+    }))
     return true
   } catch (err) {
     logDbError('updateInquiry', err)
@@ -265,7 +286,7 @@ export async function cloudLogTurn(
   userTextForTitle?: string
 ): Promise<boolean> {
   try {
-    await set(ref(db, `${userNode(uid)}/turns/${sessionId}/${msg._id}`), msg)
+    await set(ref(db, `${userNode(uid)}/turns/${sessionId}/${msg._id}`), stripUndefined(msg))
     const convoRef = ref(db, `${userNode(uid)}/conversations/${sessionId}`)
     const existing = await get(convoRef)
     if (!existing.exists()) {
@@ -278,7 +299,7 @@ export async function cloudLogTurn(
         createdAt: msg.createdAt,
         updatedAt: msg.createdAt
       }
-      await set(convoRef, convo)
+      await set(convoRef, stripUndefined(convo))
     } else {
       await update(convoRef, { updatedAt: msg.createdAt })
     }

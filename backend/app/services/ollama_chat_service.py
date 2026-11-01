@@ -62,6 +62,28 @@ OLLAMA_CONTEXT_TURNS = int(os.getenv("OLLAMA_CONTEXT_TURNS", "6"))
 OLLAMA_TIMEOUT_S = float(os.getenv("OLLAMA_TIMEOUT", "60"))
 OLLAMA_HEADERS = {"Authorization": f"Bearer {OLLAMA_API_KEY}"} if OLLAMA_API_KEY else {}
 
+# Persistent HTTP client connection pools with keep-alive for fast responses
+_SYNC_CLIENT: Optional[httpx.Client] = None
+_ASYNC_CLIENT: Optional[httpx.AsyncClient] = None
+
+def _get_sync_client() -> httpx.Client:
+    global _SYNC_CLIENT
+    if _SYNC_CLIENT is None or _SYNC_CLIENT.is_closed:
+        _SYNC_CLIENT = httpx.Client(
+            timeout=httpx.Timeout(OLLAMA_TIMEOUT_S, connect=10.0),
+            limits=httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=120.0),
+        )
+    return _SYNC_CLIENT
+
+def _get_async_client() -> httpx.AsyncClient:
+    global _ASYNC_CLIENT
+    if _ASYNC_CLIENT is None or _ASYNC_CLIENT.is_closed:
+        _ASYNC_CLIENT = httpx.AsyncClient(
+            timeout=httpx.Timeout(OLLAMA_TIMEOUT_S, connect=10.0),
+            limits=httpx.Limits(max_keepalive_connections=20, max_connections=50, keepalive_expiry=120.0),
+        )
+    return _ASYNC_CLIENT
+
 # Short-lived cache for the Ollama /api/tags probe so chat turns do not pay
 # for a redundant health round-trip on every message.
 _HEALTH_CACHE: Dict[str, Any] = {}
@@ -71,11 +93,11 @@ _HEALTH_TTL_S = 30.0
 # without any DB scan or model call (0ms AI time). Keeps "Hi" / "How are
 # you?" / "Thanks" / "Bye" fast and never triggers a property search.
 _INSTANT_GREETINGS_LIST = [
-    "Hello and welcome to LYKA Realty! I'm your Dubai property concierge. Are you looking to buy or rent — and which community do you love?",
-    "Welcome to LYKA Realty! Wonderful to connect with you. Tell me what kind of home you're envisioning in Dubai.",
-    "Hello! Welcome to LYKA Realty. I'm here to help you find verified luxury homes across Dubai. Where would you like to begin?",
-    "Warm greetings from LYKA Realty! Whether you're searching for an apartment, villa, or investment, I'm ready to assist.",
-    "Hi there! Welcome to LYKA Realty. Tell me your preferred location, budget, or bedroom count to get started."
+    "Hey! How are you doing today?",
+    "Hello! How can I help you today?",
+    "Hi there! Great to chat with you. What's on your mind?",
+    "Hey! Wonderful to connect with you today.",
+    "Hello! How are things going with you today?"
 ]
 _INSTANT_GREETINGS = _INSTANT_GREETINGS_LIST[0]
 
@@ -721,11 +743,11 @@ def _general_prompt(session: "OllamaChatSession", message: str, style: str) -> s
     else:
         style_rule = "Reply in clear, natural English."
     return (
-        "You are LYKA AI, a warm, intelligent Dubai real-estate assistant. "
-"You specialize in buying, renting, selling, budgets, communities, property types, bedrooms, amenities, "
-"location comparisons, pricing, and property-search guidance. "
-"If a user asks about unrelated topics, politely explain that you specialize in real estate and offer "
-"to help with their property needs. "
+        "You are LYKA AI, a friendly, sensible, human-style conversational assistant and Dubai real estate guide. "
+        "Speak like a helpful, natural friend, not an advertisement or robot. Understand simple English, informal text, and typos. "
+        "Give short, direct, context-aware answers. Never repeatedly redirect casual conversation back to buying, renting, or selling properties. "
+        "Never repeat the same greeting or introductory text in your replies. Do not over-explain simple questions. "
+        "Never invent personal information about the user. When the user asks about real estate, help them directly and transparently."
         "Answer the customer naturally like a helpful human, not a form.\n"
         f"{style_rule}\n"
         "Supported response languages are ONLY English and Tamil (including Tanglish). "
@@ -2060,7 +2082,8 @@ def _prepare_turn(
 
 
 def _model_request(prompt: str) -> str:
-    with httpx.Client(timeout=OLLAMA_TIMEOUT_S) as client:
+    client = _get_sync_client()
+    try:
         if OLLAMA_API_KEY:
             res = client.post(
                 f"{OLLAMA_BASE_URL}/api/chat",
@@ -2096,10 +2119,49 @@ def _model_request(prompt: str) -> str:
             logger.warning("Ollama generate returned status %d", res.status_code)
             return ""
         return (res.json().get("response") or "").strip()
+    except Exception as exc:
+        logger.warning("Ollama sync request error: %s", exc)
+        return ""
 
 
 def _concierge_fallback_answer(msg: str) -> Optional[str]:
     low = (msg or "").lower()
+
+    # Casual eating / human actions
+    if any(phrase in low for phrase in ["are you eat", "did you eat", "have you eaten", "do you eat", "can you eat"]):
+        return "I don't eat because I'm an AI, but thanks for asking! Have you eaten?"
+
+    # Simply asking / informal clarification
+    if any(phrase in low for phrase in ["ask simply", "asking simply", "just asking", "simple question"]):
+        return "Sorry, I misunderstood you! I don't eat, but thank you for asking!"
+
+    # Speech clarity / simplicity feedback
+    if any(phrase in low for phrase in ["why you not speak correctly", "speak correctly", "talk properly", "too complicated", "speak simple"]):
+        return "You're right. My replies were too complicated. I'll keep things simple and natural."
+
+    # Trust / verification
+    if any(phrase in low for phrase in ["how can i trust you", "can i trust you", "why should i trust you"]):
+        return "That's a fair question. I'll be transparent about property details, prices, and what I can or cannot verify. You should always be able to check important information before making a decision."
+
+    # Casual playful acknowledgements ("oo", "oh", "cool", etc.)
+    if low in ("oo", "ooh", "oh", "ohh", "cool", "wow", "haha", "lol"):
+        return "Haha 😊 What's on your mind?"
+
+    # Friendly compliments & affection
+    if any(phrase in low for phrase in [
+        "i love you", "love you", "love u", "marry me", "you are amazing",
+        "you're amazing", "you are awesome", "you're awesome", "you are cute",
+        "you are sweet", "you're sweet", "you are wonderful", "you're wonderful",
+        "you are the best", "you're the best", "i like you", "handsome", "beautiful"
+    ]):
+        return (
+            "That's so kind of you! Thank you — you've truly made my day. 😊 "
+            "How can I help you today?"
+        )
+
+    # Casual greetings and how-are-you
+    if any(phrase in low for phrase in ["how are you", "how are u", "how r u", "how's it going", "how is it going"]):
+        return "I'm doing great, thank you for asking! How are you doing today?"
 
     # Community guidance for customers unfamiliar with Dubai
     if any(phrase in low for phrase in [
@@ -2172,7 +2234,7 @@ def _concierge_fallback_answer(msg: str) -> Optional[str]:
             "Buying in Dubai offers long-term capital appreciation, high rental yields (typically 6% to 9%), and zero property or capital gains taxes. Renting offers flexibility before settling into a long-term neighborhood. Tell me your plans and I can help you decide."
         )
     return (
-        "Dubai offers exceptional lifestyle and investment opportunities across premier communities such as Dubai Marina, Downtown Dubai, and Dubai Hills Estate. Are you looking to buy, rent, or invest — and what kind of home are you envisioning?"
+        "I'm here to chat or help with anything you need in Dubai. What's on your mind?"
     )
 
 
@@ -2336,8 +2398,8 @@ async def stream_ollama_chat_message(
         yield f"data: {json.dumps({'type': 'token', 'token': reply})}\n\n"
     else:
         try:
-            async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT_S) as client:
-                async with client.stream(
+            client = _get_async_client()
+            async with client.stream(
                     "POST",
                     f"{OLLAMA_BASE_URL}/api/generate",
                     json={

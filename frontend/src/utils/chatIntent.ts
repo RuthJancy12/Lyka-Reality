@@ -106,7 +106,68 @@ export function detectChatIntent(rawText: string, ctx: IntentContext): IntentRes
     return { intent: 'property_followup', route: 'backend' }
   }
 
-  // 3. Emotional support — always empathetic, never a property pitch.
+  // 3. Affection, compliments and friendly appreciation — warm, witty and professional.
+  if (hasWord(lower, [
+    'i love you', 'love you', 'i love u', 'love u', 'do you love me',
+    'marry me', 'will you marry me', 'you are awesome', 'you are amazing',
+    'you are great', 'you are wonderful', 'you are the best', 'you are cute',
+    'you are sweet', "you're awesome", "you're amazing", "you're great",
+    "you're wonderful", "you're the best", "you're cute", "you're sweet",
+    'so sweet', 'so kind', 'i like you', 'i adore you', 'you rock'
+  ])) {
+    return {
+      intent: 'casual',
+      route: 'instant',
+      reply: pick([
+        "That is so kind of you to say! Thank you — you've truly brightened my day. 😊 How can I help you today?",
+        "You're making me blush! That is wonderfully sweet. How's your day going?",
+        "Thank you so much! That warmth means a lot to me. I'm right here whenever you want to chat."
+      ], ctx.turnCount)
+    }
+  }
+
+  // 3b. Casual natural conversational check-ins & queries
+  if (hasWord(lower, ['are you eat', 'did you eat', 'have you eaten', 'do you eat', 'can you eat'])) {
+    return {
+      intent: 'casual',
+      route: 'instant',
+      reply: "I don't eat because I'm an AI, but thanks for asking! Have you eaten?"
+    }
+  }
+
+  if (hasWord(lower, ['ask simply', 'asking simply', 'just asking', 'iam ask simply', 'simple question'])) {
+    return {
+      intent: 'casual',
+      route: 'instant',
+      reply: "Sorry, I misunderstood you! I don't eat, but thank you for asking!"
+    }
+  }
+
+  if (hasWord(lower, ['why you not speak correctly', 'speak correctly', 'talk properly', 'speak simple', 'too complicated'])) {
+    return {
+      intent: 'casual',
+      route: 'instant',
+      reply: "You're right. My replies were too complicated. I'll keep things simple and natural."
+    }
+  }
+
+  if (hasWord(lower, ['how can i trust you', 'can i trust you', 'why should i trust you'])) {
+    return {
+      intent: 'casual',
+      route: 'instant',
+      reply: "That's a fair question. I'll be transparent about property details, prices, and what I can or cannot verify. You should always be able to check important information before making a decision."
+    }
+  }
+
+  if (short && ['oo', 'ooh', 'oh', 'ohh', 'cool', 'wow', 'haha', 'lol'].includes(lower.replace(/[!.,?]/g, ''))) {
+    return {
+      intent: 'casual',
+      route: 'instant',
+      reply: "Haha 😊 What's on your mind?"
+    }
+  }
+
+  // 4. Emotional support — always empathetic, never a property pitch.
   if (hasWord(lower, ["i'm sad", 'i am sad', 'feeling sad', 'feel sad', 'sad today', 'so sad', 'feeling down', 'depressed', "i'm stressed", 'i am stressed', 'feeling stressed', 'feel stressed', 'stressed out', 'anxious', 'anxiety', 'feeling anxious', 'worried', 'upset', 'crying', 'lonely', 'feeling lonely', 'tired of life', 'give up', 'hopeless', 'cheer me up', 'comfort me'])) {
     return {
       intent: 'emotional',
@@ -153,9 +214,9 @@ export function detectChatIntent(rawText: string, ctx: IntentContext): IntentRes
       route: 'instant',
       reply: withName(
         pick([
-          "Hi there! I'm LYKA AI, your friendly Dubai property guide. How's your day going — and what kind of home are you dreaming about?",
-          'Hello! Lovely to meet you. I can chat about anything, or help you find a home in Dubai. What\'s on your mind today?',
-          "Hey! Great to see you. Tell me a little about what you're looking for — or just say hi and we'll take it from there."
+          "Hey! How are you doing today?",
+          "Hello! Great to chat with you. What's on your mind?",
+          "Hi there! How's your day going?"
         ], ctx.turnCount),
         ctx.userName
       )

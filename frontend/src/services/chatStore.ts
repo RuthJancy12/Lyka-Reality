@@ -310,6 +310,8 @@ export function saveLocalUser(
     updatedAt: nowIso()
   }
   // Drop emptied optional fields instead of storing "".
+  if (!doc.phone) delete doc.phone
+  if (!doc.city) delete doc.city
   if (!doc.country) delete doc.country
   if (!doc.discovery_source) delete doc.discovery_source
   writeJson(profileKeyFor(owner), doc)

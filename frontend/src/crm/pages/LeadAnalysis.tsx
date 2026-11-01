@@ -151,7 +151,7 @@ export function LeadAnalysis() {
     let cancelled = false
     listStaff()
       .then((rows) => {
-        if (!cancelled) setStaffList(rows.filter((s) => s.is_active && s.role === 'salesperson'))
+        if (!cancelled) setStaffList(rows.filter((s) => s.is_active && (s.role === 'salesperson' || s.role === 'sales_agent')))
       })
       .catch(() => {
         if (!cancelled) setStaffList([])

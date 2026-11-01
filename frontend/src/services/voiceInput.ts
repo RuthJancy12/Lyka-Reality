@@ -140,6 +140,17 @@ export class VoiceInputSession {
     this.baseText = text || ''
   }
 
+  public clearBaseText() {
+    this.baseText = ''
+    this.latestUtterance = ''
+    this.lastFinal = ''
+    this.lastFinalAt = 0
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer)
+      this.silenceTimer = null
+    }
+  }
+
   private combine(base: string, addition: string): string {
     return combineVoiceText(base, addition)
   }
@@ -197,7 +208,11 @@ export class VoiceInputSession {
         try {
           let interim = ''
           let finalChunk = ''
-          for (let i = 0; i < event.results.length; i++) {
+          // Start from event.resultIndex so already-finalized results from
+          // previous events are NOT re-accumulated (prevents duplication like
+          // "I need a I need a" when the browser replays the full results list).
+          const startIdx = typeof event.resultIndex === 'number' ? event.resultIndex : 0
+          for (let i = startIdx; i < event.results.length; i++) {
             const res = event.results[i]
             if (!res || !res[0]) continue
             const transcript = String(res[0].transcript || '').trim()
@@ -310,6 +325,9 @@ export class VoiceInputSession {
     if (this.silenceTimer) clearTimeout(this.silenceTimer)
     this.silenceTimer = null
     this.baseText = ''
+    this.latestUtterance = ''
+    this.lastFinal = ''
+    this.lastFinalAt = 0
 
     // Pause mic capture so mic never records the AI's answer or TTS output
     this.pauseForAI()

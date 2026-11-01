@@ -956,6 +956,8 @@ function UIAgentModalContent({
     setApiError(null)
     setView('chat')
     lastFailedQueryRef.current = text
+    setInputText('')
+    voiceSessionRef.current?.clearBaseText()
 
     const userRef = opts?.messageRef || nextChatMsgId('msg')
     const canPersist = Boolean(fbUser?.uid)

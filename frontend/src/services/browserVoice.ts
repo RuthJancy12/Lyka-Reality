@@ -224,7 +224,11 @@ export class BrowserVoiceSession {
       let fullTranscript = ''
       let sawFinal = false
       try {
-        for (let i = 0; i < event.results.length; ++i) {
+        // Start from event.resultIndex so already-finalized results from
+        // previous events are NOT re-accumulated (prevents duplicate speech events
+        // and repeated transcript appends like 'Hi, Hi, Hi' or 'Actually').
+        const startIdx = typeof event.resultIndex === 'number' ? event.resultIndex : 0
+        for (let i = startIdx; i < event.results.length; ++i) {
           const res = event.results[i]
           if (res && res[0]) {
             fullTranscript += ' ' + res[0].transcript

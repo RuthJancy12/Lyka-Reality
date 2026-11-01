@@ -7,7 +7,7 @@ import { useState } from 'react'
 // data permissions regardless of what the nav shows.
 
 import { NavLink, Navigate, Route, Routes, Link } from 'react-router-dom'
-import { LayoutDashboard, PhoneCall, DollarSign, Users, Building2, ClipboardList, Briefcase, ContactRound, LogOut, Home, ShieldCheck, Loader2, Megaphone, Clock, Calendar, Award, FileText, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, PhoneCall, DollarSign, Users, Building2, ClipboardList, Briefcase, ContactRound, LogOut, Home, ShieldCheck, Loader2, Megaphone, Clock, Calendar, Award, FileText, MessageSquare, Menu, X } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { HrmsAdminDashboard } from '../pages/HrmsAdminDashboard'
 import { EmployeeSelfService } from '../components/EmployeeSelfService'
@@ -110,6 +110,8 @@ function StaffShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
   const items = getNavItems(role)
   const [accountModalOpen, setAccountModalOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   return (
     <div className="crm-shell" style={{ minHeight: '100vh', background: 'var(--champagne-light, #FAF8F4)', display: 'flex' }}>
       <aside
@@ -130,53 +132,84 @@ function StaffShell({ children }: { children: React.ReactNode }) {
           overflowY: 'auto',
         }}
       >
-        <Link
-          to="/"
-          style={{
-            textDecoration: 'none',
-            color: '#FFFFFF',
-            fontWeight: 800,
-            fontSize: '18px',
-            padding: '4px 12px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            letterSpacing: '0.04em',
-            borderBottom: '1px solid rgba(197, 168, 105, 0.15)',
-            marginBottom: '10px',
-          }}
-        >
-          <span className="luxury-serif">LYKA</span>
-          <span style={{ color: 'var(--gold-hover, #D8BD80)', fontSize: '13px', fontWeight: 700, padding: '2px 8px', background: 'rgba(197, 168, 105, 0.15)', border: '1px solid rgba(197, 168, 105, 0.3)', borderRadius: '6px' }}>
-            CRM
-          </span>
-        </Link>
-        {items.map((n) => (
-          <NavLink
-            key={n.to}
-            to={n.to}
-            end={n.end}
-            style={({ isActive }) => ({
+        <div className="crm-top-bar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <Link
+            to="/"
+            style={{
+              textDecoration: 'none',
+              color: '#FFFFFF',
+              fontWeight: 800,
+              fontSize: '18px',
+              padding: '4px 12px 20px',
               display: 'flex',
               alignItems: 'center',
-              gap: '11px',
-              padding: '10px 14px',
-              borderRadius: '9px',
-              fontSize: '13.5px',
-              fontWeight: isActive ? 700 : 500,
-              textDecoration: 'none',
-              transition: 'all 0.18s ease',
-              color: isActive ? '#FFFFFF' : 'rgba(251, 248, 243, 0.72)',
-              background: isActive
-                ? 'linear-gradient(135deg, rgba(197, 168, 105, 0.22) 0%, rgba(62, 30, 56, 0.6) 100%)'
-                : 'transparent',
-              borderLeft: isActive ? '3px solid var(--gold-primary, #C5A869)' : '3px solid transparent',
-              boxShadow: isActive ? '0 2px 10px rgba(0, 0, 0, 0.18)' : 'none',
-            })}
+              gap: '8px',
+              letterSpacing: '0.04em',
+              borderBottom: '1px solid rgba(197, 168, 105, 0.15)',
+              marginBottom: '10px',
+            }}
+            className="crm-brand-link"
           >
-            <n.icon size={16} color="currentColor" /> {n.label}
-          </NavLink>
-        ))}
+            <span className="luxury-serif">LYKA</span>
+            <span style={{ color: 'var(--gold-hover, #D8BD80)', fontSize: '13px', fontWeight: 700, padding: '2px 8px', background: 'rgba(197, 168, 105, 0.15)', border: '1px solid rgba(197, 168, 105, 0.3)', borderRadius: '6px' }}>
+              CRM
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            className="crm-mobile-toggle"
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            aria-label="Toggle CRM navigation"
+            style={{
+              display: 'none',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(197, 168, 105, 0.3)',
+              borderRadius: '6px',
+              padding: '6px 10px',
+              color: 'var(--gold-hover, #D8BD80)',
+              cursor: 'pointer',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              fontWeight: 600,
+            }}
+          >
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            <span>Menu</span>
+          </button>
+        </div>
+
+        <nav className={`crm-nav ${mobileMenuOpen ? 'crm-nav-mobile-open' : ''}`} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+          {items.map((n) => (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              end={n.end}
+              onClick={() => setMobileMenuOpen(false)}
+              style={({ isActive }) => ({
+                display: 'flex',
+                alignItems: 'center',
+                gap: '11px',
+                padding: '10px 14px',
+                borderRadius: '9px',
+                fontSize: '13.5px',
+                fontWeight: isActive ? 700 : 500,
+                textDecoration: 'none',
+                transition: 'all 0.18s ease',
+                color: isActive ? '#FFFFFF' : 'rgba(251, 248, 243, 0.72)',
+                background: isActive
+                  ? 'linear-gradient(135deg, rgba(197, 168, 105, 0.22) 0%, rgba(62, 30, 56, 0.6) 100%)'
+                  : 'transparent',
+                borderLeft: isActive ? '3px solid var(--gold-primary, #C5A869)' : '3px solid transparent',
+                boxShadow: isActive ? '0 2px 10px rgba(0, 0, 0, 0.18)' : 'none',
+              })}
+            >
+              <n.icon size={16} color="currentColor" /> {n.label}
+            </NavLink>
+          ))}
+        </nav>
+
         <div
           className="crm-userbox"
           style={{
@@ -187,16 +220,16 @@ function StaffShell({ children }: { children: React.ReactNode }) {
             color: 'rgba(251, 248, 243, 0.7)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px', gap: '8px' }}>
+          <div className="crm-user-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px', gap: '8px' }}>
             <div style={{ fontWeight: 700, color: '#FFFFFF', fontSize: '13.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>
               {user?.name || user?.email}
             </div>
             <NotificationCenter theme="dark" />
           </div>
-          <div style={{ display: 'inline-block', margin: '4px 0 10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(197, 168, 105, 0.15)', color: 'var(--gold-hover, #D8BD80)', fontSize: '11px', fontWeight: 600, textTransform: 'capitalize' }}>
+          <div className="crm-role-badge" style={{ display: 'inline-block', margin: '4px 0 10px', padding: '2px 8px', borderRadius: '4px', background: 'rgba(197, 168, 105, 0.15)', color: 'var(--gold-hover, #D8BD80)', fontSize: '11px', fontWeight: 600, textTransform: 'capitalize' }}>
             {role?.replace('_', ' ')}
           </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="crm-user-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
             <button
               type="button"
               onClick={() => setAccountModalOpen(true)}

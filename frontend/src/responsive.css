@@ -17,46 +17,78 @@ body {
   max-width: 100%;
 }
 
-/* ---------- Tablet and below (1024px) ---------- */
+/* ---------- CRM Mobile Layout & Admin Header Refinements ---------- */
 @media (max-width: 1024px) {
-  /* CRM shell stacks: sidebar becomes a top bar, content takes full width. */
   .crm-shell {
     flex-direction: column !important;
   }
   .crm-aside {
     width: 100% !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    overflow-x: auto !important;
+    height: auto !important;
+    position: relative !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
     border-right: none !important;
-    border-bottom: 1px solid var(--champagne-border) !important;
-    padding: 12px !important;
-    gap: 6px !important;
+    border-bottom: 1px solid rgba(197, 168, 105, 0.25) !important;
+    padding: 12px 16px !important;
+    gap: 10px !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
   }
-  .crm-aside > a:first-child {
-    white-space: nowrap !important;
-    padding: 4px 10px !important;
+  .crm-brand-link {
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+    border-bottom: none !important;
   }
-  .crm-aside nav,
-  .crm-aside .crm-nav {
+  .crm-mobile-toggle {
+    display: inline-flex !important;
+  }
+  .crm-nav {
+    display: none !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    padding-top: 8px !important;
+    border-top: 1px solid rgba(197, 168, 105, 0.15) !important;
+    gap: 4px !important;
+  }
+  .crm-nav.crm-nav-mobile-open {
     display: flex !important;
-    flex-direction: row !important;
-    overflow-x: auto !important;
-    flex: 1 !important;
   }
-  .crm-aside a {
+  .crm-nav a {
     white-space: nowrap !important;
+    padding: 9px 12px !important;
+    font-size: 13px !important;
   }
   .crm-userbox {
     margin-top: 0 !important;
-    margin-left: auto !important;
-    border-top: none !important;
-    border-left: 1px solid var(--champagne-border) !important;
-    padding: 4px 0 4px 12px !important;
-    white-space: nowrap !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+    border-top: 1px solid rgba(197, 168, 105, 0.18) !important;
+    border-left: none !important;
+    padding: 10px 0 2px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+  .crm-user-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .crm-role-badge {
+    margin: 0 !important;
+    align-self: flex-start !important;
+  }
+  .crm-user-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding-top: 4px !important;
   }
   .crm-main {
-    padding: 18px 16px !important;
+    padding: 16px 14px !important;
     max-width: 100% !important;
   }
 }
@@ -173,5 +205,323 @@ body {
   /* CRM main padding tightens; filter inputs wrap full width. */
   .crm-main {
     padding: 14px 12px !important;
+  }
+}
+
+
+/* ============================================================
+   MOBILE UI ENHANCEMENTS (Clean, App-like, Touch-Optimized)
+   Tested at 360px (Android small), 390px (iPhone standard), 430px (iPhone Max)
+   ============================================================ */
+
+@media (max-width: 640px) {
+  /* --- Global mobile polish & typography --- */
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Safe container gutters */
+  .container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* --- Navigation Bar Mobile Polish --- */
+  header .container {
+    height: 64px !important;
+  }
+
+  header a img {
+    max-height: 34px !important;
+  }
+
+  /* Touch-friendly buttons, no bulky padding */
+  .gold-btn, .navy-btn, .outline-navy-btn, .secondary-beige-btn {
+    padding: 10px 18px !important;
+    font-size: 13.5px !important;
+    border-radius: 8px !important;
+    touch-action: manipulation;
+  }
+
+  /* --- Hero Section & Mobile Search --- */
+  section:first-of-type {
+    min-height: auto !important;
+    padding: 44px 0 54px !important;
+  }
+
+  h1.luxury-serif {
+    font-size: 32px !important;
+    line-height: 1.2 !important;
+    margin-bottom: 12px !important;
+  }
+
+  .hero-search-card {
+    padding: 16px !important;
+    border-radius: 14px !important;
+    margin: 0 auto !important;
+    box-shadow: 0 12px 32px rgba(26, 13, 24, 0.16) !important;
+  }
+
+  /* Purpose tabs (Buy / Rent / All) */
+  .hero-search-card > div:first-child {
+    display: flex !important;
+    width: 100% !important;
+    gap: 6px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .hero-search-card > div:first-child button {
+    flex: 1 !important;
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    border-radius: 6px !important;
+  }
+
+  /* Form input controls */
+  .hero-search-form > div {
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+  }
+
+  .hero-search-form select,
+  .hero-search-form input {
+    font-size: 15px !important;
+  }
+
+  /* --- Property Cards on Mobile (No oversized cards, crisp aspect ratio) --- */
+  #properties {
+    padding: 50px 0 !important;
+  }
+
+  #properties .container > div:first-child h2 {
+    font-size: 26px !important;
+  }
+
+  #properties .container > div:first-child p {
+    font-size: 13.5px !important;
+  }
+
+  /* Property card image container */
+  div[style*="height: 240px"][style*="overflow: hidden"] {
+    height: 200px !important;
+  }
+
+  /* --- Property Filter Tabs & Sort on Mobile --- */
+  #properties div[style*="marginBottom: 32px"] > div:first-child {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  #properties div[style*="marginBottom: 32px"] > div:first-child > div:first-child {
+    overflow-x: auto !important;
+    max-width: 100% !important;
+    padding-bottom: 6px !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none;
+  }
+
+  #properties div[style*="marginBottom: 32px"] > div:first-child > div:first-child::-webkit-scrollbar {
+    display: none;
+  }
+
+  #properties div[style*="marginBottom: 32px"] > div:first-child > div:first-child button {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+  }
+
+  /* Filter & Sort Bar */
+  #properties div[style*="padding: 14px 20px"] {
+    padding: 12px 14px !important;
+    border-radius: 8px !important;
+  }
+
+  /* --- Stats Ribbon Mobile App Style --- */
+  #about {
+    padding: 44px 0 !important;
+  }
+
+  #about div[style*="gridTemplateColumns"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px 14px !important;
+  }
+
+  /* --- Chatbot Modal & Chat Bubbles --- */
+  .lyka-chat-modal {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .lyka-chat-header {
+    padding: 10px 14px !important;
+    height: 56px !important;
+  }
+
+  .lyka-chat-orb {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .lyka-chat-scroll {
+    padding: 14px 12px 18px !important;
+    gap: 12px !important;
+  }
+
+  /* App-style chat bubbles */
+  .lyka-chat-bubble {
+    max-width: 88% !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+    border-radius: 16px !important;
+  }
+
+  .lyka-chat-bubble.user {
+    border-radius: 16px 16px 4px 16px !important;
+  }
+
+  .lyka-chat-bubble.agent {
+    border-radius: 16px 16px 16px 4px !important;
+  }
+
+  /* Chat composer zone & controls */
+  .lyka-chat-composer-zone {
+    padding: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    background: #FFFFFF !important;
+    border-top: 1px solid #EDE3D5 !important;
+  }
+
+  .lyka-chat-composer {
+    min-height: 46px !important;
+    padding: 4px 6px 4px 14px !important;
+    border-radius: 24px !important;
+    background: #F8F7F2 !important;
+  }
+
+  .lyka-chat-input {
+    font-size: 15px !important;
+    padding: 8px 0 !important;
+  }
+
+  .lyka-chat-mic-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .lyka-chat-send-btn {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  /* In-chat property cards */
+  .lyka-chat-prop-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .lyka-chat-prop-card {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .lyka-chat-prop-title {
+    font-size: 13px !important;
+  }
+
+  .lyka-chat-prop-price {
+    font-size: 15px !important;
+  }
+
+  /* Quick action suggestion chips in chat */
+  .lyka-chat-chips {
+    gap: 6px !important;
+  }
+
+  .lyka-chat-chip {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* --- Floating AI Orb Controller on Mobile --- */
+  .lyka-orb-container {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    right: 16px !important;
+    gap: 4px !important;
+  }
+
+  .lyka-orb-badge {
+    display: none !important; /* Clean screen estate on mobile */
+  }
+
+  .lyka-orb-button {
+    width: 52px !important;
+    height: 52px !important;
+    box-shadow: 0 6px 20px rgba(21, 8, 19, 0.45) !important;
+  }
+
+  .lyka-orb-core {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  /* --- Customer Home Section Tabs on Mobile --- */
+  div[style*="borderBottom: 1px solid"][style*="display: flex"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none;
+    flex-wrap: nowrap !important;
+  }
+
+  /* --- Form Inputs across Mobile Modals & Inquiries --- */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS */
+    border-radius: 8px !important;
+  }
+
+  /* --- Footer Mobile App Layout --- */
+  footer {
+    padding: 44px 0 24px !important;
+  }
+
+  footer div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+}
+
+/* Extra adjustments for compact phones (360px - 390px) */
+@media (max-width: 400px) {
+  .hero-search-card {
+    padding: 12px !important;
+  }
+
+  h1.luxury-serif {
+    font-size: 28px !important;
+  }
+
+  #about div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .lyka-chat-bubble {
+    max-width: 94% !important;
+    font-size: 13.5px !important;
+  }
+
+  .lyka-chat-composer {
+    padding-left: 10px !important;
   }
 }
